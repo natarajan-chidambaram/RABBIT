@@ -1,0 +1,372 @@
+import pandas as pd
+import numpy as np
+import warnings
+import requests
+import sys
+import argparse
+import time
+import dateutil
+import xgboost as xgb
+import site
+from tqdm import tqdm
+
+import GenerateActivities as gat
+import ExtractEvent as eev
+import ComputeFeatures as cfe
+
+
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
+def time_to_pause(nextResetTime):
+    '''    
+    args:
+        nextResetTime (str/int): Next reset time for the corresponding API key in the form of timestamp
+    
+    returns:
+        timeDiff (float): The time that is remaining for the next reset to happen. This is the time (in seconds) that the script needs to wait/sleep
+        ResetTime (datetime.datetime): The time at which the next reset happens
+    
+    description: Calculates the time that is required to pause querying in case of limit exceed situation
+    '''
+    ResetTime = datetime.fromtimestamp(int(nextResetTime)).strftime('%Y-%m-%d %H:%M:%S')
+    ResetTime = datetime.strptime(ResetTime, '%Y-%m-%d %H:%M:%S')
+    timeDiff = (ResetTime - datetime.now()).total_seconds() + 120
+    return timeDiff, ResetTime
+
+def get_model():
+    '''
+    args: None
+
+    returns: bot_identification_model (json); Json file with trained model parameters
+    
+    description: Load the bot identification model
+    '''
+    bot_identification_model = xgb.XGBClassifier()
+    for dir in site.getsitepackages():
+        if dir.endswith('site-packages'):
+            target_dir = dir
+        else:
+            target_dir = site.getsitepackages()[0]
+    bot_identification_model.load_model(f'{target_dir}/rabbit_model.json')
+    # filename = 'rabbit_model.json'
+    # bot_identification_model = xgb.XGBClassifier()
+    # bot_identification_model.load_model(filename)
+    
+    return(bot_identification_model)
+
+def compute_confidence(probability_value):
+    '''
+    args: probability_value (float) - the bot probability value given by the model
+
+    returns: prediction (str) - prediction of contribtuor type based on probability ('bot' or 'human') 
+             confidence (float) - confidence score of the prediction
+
+    description: based on the prediction probability that a contributor is a bot, make the prediction based on threshold
+                 and compute the confidence score on the prediction
+    '''
+    if(probability_value <= 0.5):
+        prediction = 'human'
+    else:
+        prediction = 'bot'
+    confidence = (abs(probability_value - 0.5)*2).round(3)
+
+    return(prediction,confidence)
+    
+
+def QueryEvents(contributor, username, key, page):
+    '''
+    args: contributor (str) - contributor name
+          username (str) - name of the account to which the GitHub API key is associated with
+          key (str) - the API key
+          page (str) - the events page number to be queried
+    
+    returns: list_events (list) - a list of events that were performed by contributor
+
+    description: Query the GitHub Events API with 100 events per page, unpack the json format to get the requried fields and store it in list format
+    '''
+
+    QUERY_ROOT = "https://api.github.com"
+    ACCOUNT = username
+    TOKEN = key
+    query_failed = False
+    list_event = []
+
+    try:
+        query = f'{QUERY_ROOT}/users/{contributor}/events?per_page=100&page={page}'
+        query_session = requests.Session()
+        query_session.auth = (ACCOUNT, TOKEN)
+        response = query_session.get(query)
+
+        if response.ok:
+            json_response = response.json()
+            if not json_response and page == 1:
+                return(list_event, query_failed)
+            else:
+                events = eev.unpackJson(json_response)
+                list_event.extend(events)
+
+            if int(response.headers['X-RateLimit-Remaining']) < 5:
+                pause, ResetTime = time_to_pause(int(response.headers['X-RateLimit-Reset']))
+                print("Limit going to be reached. Querying paused until next reset time: {0}".format(ResetTime))
+                time.sleep(pause)
+        else:
+            query_failed = True
+            return(list_event, query_failed)
+    except requests.exceptions.Timeout as e:
+        print('Request timeout exceeded, retrying after 60 seconds')
+        time.sleep(60)
+        print('Retrying...')
+    except requests.ConnectionError as e:
+        print("Connection error, retrying after 10 seconds")
+        time.sleep(10)
+        print('Retrying...')
+    
+    return(list_event, query_failed)
+
+def MakePrediction(contributor, username, apikey, min_events, num_queries, time_after, verbose, min_confidence):
+    '''
+    args: contributor (str) - name of the contributor for whom the prediciton needs to be made
+          username (str) - name of the account to which the GitHub API key is associated with
+          apikey (str) - the API key
+          min_events (int) - minimum number of events that a contributor should have performed to consider them for prediciton
+          num_queries (int) - number of queries to be made to GitHub Events API
+          time_after (datetime) - Events that are made after this time_after are considered
+          verbose (bool) - If True, displays the features that were used to make the prediction
+          min_confidence (float) - minimum confidence score on the prediction to provide the contributor type 
+    
+    returns: activity_features (array) - an array of 7 features and the probability that the contributor is a bot
+
+    description: 1) Query the GitHub Events API
+                 2) Identify the activities performed by the contributor through queried events
+                 3) Compute activity features
+                 4) Invoke the trained model
+                 5) Predict the proability that the contributor is a bot 
+    '''
+    
+    page=1
+    df_events_obt = pd.DataFrame()
+    activities = pd.DataFrame()
+    all_features = ['events','activities',
+                    'NAT_mean','NT',
+                    'DCAT_median','NOR',
+                    'DCA_gini','NAR_mean']
+    result_cols = all_features + ['prediction','confidence']
+    while(page <= num_queries):
+        events, query_failed = QueryEvents(contributor, username, apikey, page)
+        if(len(events)>0):
+            df_events_obt = pd.concat([df_events_obt, pd.DataFrame.from_dict(events, orient = 'columns').assign(page=page)])
+            df_events_obt['created_at'] = pd.to_datetime(df_events_obt.created_at, errors='coerce').dt.tz_localize(None)
+            time_after = pd.to_datetime(time_after, errors='coerce').tz_localize(None)
+            if(df_events_obt['created_at'].min() > time_after):
+                time_limit_reached=True
+            else:
+                time_limit_reached=False
+            df_events_obt = df_events_obt[df_events_obt['created_at']>=time_after].sort_values('created_at')
+            if(len(events) == 100 and time_limit_reached):
+                    page = page + 1
+            else:
+                break
+        elif(query_failed):
+            result = pd.DataFrame([[np.nan]*len(all_features) +['unknown','no account']], 
+                                columns=result_cols,
+                                index=[contributor])
+            break
+        else:
+            result = pd.DataFrame([[0,0]+[np.nan]*(len(all_features)-2)+['unknown','< events threshold']], 
+                                columns=result_cols,
+                                index=[contributor])
+            break
+    if(df_events_obt.shape[0]>0):
+        activities = gat.activity_identification(df_events_obt)
+    
+    if(len(activities)>0):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            activity_features = cfe.extract_features(activities)
+        activity_features = pd.DataFrame([activity_features], 
+                                            index=[contributor], 
+                                            columns=['NAT_mean',
+                                                    'NT',
+                                                    'DCAT_median',
+                                                    'NOR',
+                                                    'DCA_gini',
+                                                    'NAR_mean']
+                                        )
+        if(df_events_obt.shape[0]>=min_events):
+            model = get_model()
+            probability = model.predict_proba(activity_features)
+            prediction, confidence = compute_confidence(probability[0][1])
+            if(confidence<=min_confidence):
+                prediction = 'unknown'
+                confidence = '< confidence threshold'
+        
+        else:
+            prediction = 'unknown'
+            confidence = '< events threshold'
+
+        result = activity_features.assign(events = df_events_obt.shape[0],
+                                          activities = activities.shape[0],
+                                          prediction = prediction, 
+                                          confidence = confidence
+                                         )
+    else:
+        result = pd.DataFrame([[0,0]+[np.nan]*(len(all_features)-2)+['unknown','< events threshold']], 
+                              columns=result_cols,
+                              index=[contributor])
+    if verbose:
+        result = result[['events','activities',
+                        'NAT_mean','NT',
+                        'DCAT_median','NOR',
+                        'DCA_gini','NAR_mean',
+                        'prediction','confidence']]
+    else:
+        result = result[['events','prediction','confidence']]
+    return(result)
+
+def get_results(contributors_name_file, username, apikey, min_events, num_queries, time_after, output_type, save_path, verbose, min_confidence, incremental):
+    '''
+    args: contributors_name_file (str) - path to the csv file containing contributors names for which the predicitons need to be made
+          username (str) - name of the account to which the GitHub API key is associated with
+          apikey (str) - the API key
+          min_events (int) - minimum number of events that a contributor should have performed to consider them for prediciton
+          num_queries (int) - number of queries to be made to GitHub Events API
+          time_after (datetime) - events that are made after this time_after are considered
+          verbose (bool) - if True, displays the features that were used to make the prediction
+          result (DataFrame) - DataFrame of prediction results
+          save_path (str) - the path along with file name and extension to save the prediction results
+          output_type (str) - to convert the results to csv or json
+          min_confidence (float) - minimum confidence score on the prediction to provide the contributor type 
+          incremental (bool) - Update the output file/print on terminal once new predictions are made. If False, 
+                          results will be accessible only after the predicitons are made for all the contributors
+    
+    returns: None
+
+    description: Gets the prediciton results and either prints it on the terminal or write into a json/csv file 
+                 depending on the provided inputs
+    '''
+    contributors = pd.read_csv(contributors_name_file, sep=' ', header=None, index_col=0).index.to_list()
+    all_results = pd.DataFrame()
+    for contributor in tqdm(contributors):
+        prediction_result = MakePrediction(contributor, username, apikey, min_events, num_queries, time_after, verbose, min_confidence)
+        all_results = pd.concat([all_results, prediction_result])
+        if incremental:
+            save_results(all_results, output_type, save_path)
+    
+    if ~incremental:
+        save_results(all_results, output_type, save_path)
+
+def save_results(all_results, output_type, save_path):
+    '''
+    args: all_results (DataFrame)- all the predictions and additional informations
+          save_path (str) - the path along with file name and extension to save the prediction results
+          output_type (str) - to convert the results to csv or json
+    
+    returns: None
+
+    description: Save the results in the given path
+    '''
+    if output_type == 'text':
+        print(all_results.reset_index(names=['account']))
+    elif(output_type == 'csv'):
+        all_results.reset_index(names=['account']).to_csv(save_path)
+    elif(output_type == 'json'):
+        all_results.reset_index(names=['account']).to_json(save_path, orient='records', indent=4)
+    
+
+def arg_parser():
+    parser = argparse.ArgumentParser(description='RABBIT is an Activity Based Bot Identification Tool that identifies bots based on their recent activities in GitHub')
+    parser.add_argument('account', type=str, default='',
+                        help='This is positional argument. A names.txt file with the account names (one name per line) should be provided as the first input to the tool. ')
+    
+    parser.add_argument(
+        '--start-time', type=str, required=False,
+        default=None, help='Start time (format: yyyy-mm-dd HH:MM:SS) to be considered for anlysing the account\'s activity. \
+                            The default start-time is 91 days before the current time.')
+    parser.add_argument(
+        '--verbose', action="store_true", required=False, default=False,
+        help='Also report the values of the features that were used to make the prediction. The default value is False.')
+    parser.add_argument(
+        '--min-events', metavar='MIN_EVENTS', type=int, required=False, default=5,
+        help='Minimum number of events that are required to make a prediction. The default minimum number of events is 5.')
+    parser.add_argument(
+        '--queries', metavar='QUERIES', type=int, required=False, default=3, choices=[1,2,3],
+        help='Number of queries to be made to the GitHub Events API for each account. The default number of queries is 3, allowed values are 1, 2 or 3.')
+    parser.add_argument(
+        '--key', metavar='APIKEY', required=True, type=str, default='',
+        help='GitHub API key to extract events from GitHub Events API')
+    parser.add_argument(
+        '--username', metavar='USERNAME', required=True, type=str, default='',
+        help='The account name to which the key belongs to')
+    parser.add_argument(
+        '--csv', metavar='FILE_NAME.csv', required=False, type=str, default='',
+        help='Saves the result in comma-separated values (csv) format.')
+    parser.add_argument(
+        '--json', metavar='FILE_NAME.json', required=False, type=str, default='',
+        help='Saves the result in json format.')
+    parser.add_argument(
+        '--min-confidence', metavar='MIN_CONFIDENCE', required=False, type=float, default=0.0, 
+        help='Minimum confidence required to report the prediction for an account. The default minimum confidence is 0.0.')
+    parser.add_argument(
+        '--incremental', action="store_true", required=False, default=False, 
+        help='Method of reporting the results - incremental/all at once. The default value is False.')
+
+    return parser.parse_args()
+
+
+def cli():
+    '''
+    args: None
+
+    returns: None
+
+    description: parse the args paramters in to tool parameters and pass it to the MakePredictions function
+    '''
+    args = arg_parser()
+
+    if args.start_time is not None:
+        time_after = datetime.strftime(dateutil.parser.parse(args.start_time), '%Y-%m-%d %H:%M:%S')
+    else:
+        time_after = datetime.strftime(datetime.now()+relativedelta(days=-91), '%Y-%m-%d %H:%M:%S')
+
+    if args.key == '' or len(args.key) < 40:
+        sys.exit('A valid GitHub personal access token is required to start the process. \
+Please read more about it in the repository readme file.')
+    else:
+        apikey = args.key
+    
+    if args.username == '':
+        sys.exit('The GitHub account name to which the key belongs to is required. \
+                 Please read more about it in the repository readme file.')
+    else:
+        username = args.username
+    
+    if args.min_events < 1 or args.min_events > 300:
+        sys.exit('Minimum number of events to make a prediction should be between 1 and 300 including both')
+    else:
+        min_events = args.min_events
+
+    if args.csv != '':
+        output_type = 'csv'
+        save_path = args.csv
+    elif args.json != '':
+        output_type = 'json'
+        save_path = args.json
+    else:
+        output_type = 'text'
+        save_path = ''
+
+    get_results(args.account, 
+                username, 
+                apikey, 
+                min_events, 
+                args.queries, 
+                time_after, 
+                output_type,
+                save_path,  
+                args.verbose,
+                args.min_confidence,
+                args.incremental)
+
+if __name__ == '__main__':
+    cli()
