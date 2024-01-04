@@ -1,8 +1,7 @@
 # RABBIT
 
-Rabbit is an Activity Based Bot Identification Tool.
-This is a machine learning based tool to identify bot accounts based on their recent activities in GitHub.
-The tool has been developed by Natarajan Chidambaram, researcher at the [Software Engineering Lab](http://informatique.umons.ac.be/genlog/) of the [University of Mons](https://www.umons.ac.be) (Belgium) as part of his PhD research in the context of [DigitalWallonia4.AI research project ARIAC (grant number 2010235)](https://www.digitalwallonia.be/ia/) and [TRAIL](https://trail.ac/en/)
+RABBIT is a recursive acronym for "Rabbit is an Activity-Based Bot Identification Tool".
+It is a command-line tool based on machine learning classifiers to identify whether a GitHub account is bot or human based on its recent GitHub event sequence.
 
 This tool accepts a text file of GitHub account names (one account name per line), GitHub API key and the user-name associated with the key to give in predictions after the following four steps.
 The first step consists of extracting the public events performed by accounts in GitHub. If the number of events is less than the provided threshold (`--min-events`), then more events will be queried until maximum number of queries (`--queries`)is reached. This step results in a set of events. 
@@ -173,6 +172,9 @@ $ rabbit names.txt --username username --key token --incremental
 This tool is distributed under [Apache2.0](https://www.apache.org/licenses/LICENSE-2.0)
 
 ## Contributors
+
+The tool has been developed by Natarajan Chidambaram, researcher at the [Software Engineering Lab](http://informatique.umons.ac.be/genlog/) of the [University of Mons](https://www.umons.ac.be) (Belgium) as part of his PhD research in the context of [DigitalWallonia4.AI research project ARIAC (grant number 2010235)](https://www.digitalwallonia.be/ia/) and [TRAIL](https://trail.ac/en/)
+
 [**Natarajan Chidambaram**](https://github.com/natarajan-chidambaram)
 
 [**Alexandre Decan**](https://github.com/alexandredecan)
