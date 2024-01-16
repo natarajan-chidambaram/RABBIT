@@ -1,27 +1,31 @@
-# RABBIT
+# RABBIT is an Activity-Based Bot Identification Tool
 
-RABBIT is a recursive acronym for "Rabbit is an Activity-Based Bot Identification Tool".
-It is a command-line tool based on machine learning classifiers to identify whether a GitHub account is bot or human based on its recent GitHub event sequence.
+**RABBIT** is a recursive acronym for "Rabbit is an Activity-Based Bot Identification Tool".
+It is a command-line tool based on machine learning classifiers to identify whether a GitHub user account is controlled by a bot (and automated agent) or a human based on its recent GitHub event sequence. This tool requires as input a text file of logins (one per line, each login uniquely determining a given GitHub user account), your personal GitHub API key, and your user login associated with this key, in order to predict the type (bot or human) of each of the logins prodived in the input text file. 
+To do so, **RABBIT** executes four steps:
+ 1. Extract (through the GitHub Events API) a sequence of public events performed by the user account corresponding to the provided login. If the number of events is less than the optional threshold `--min-events`, then more events will be queried until the maximum number of queries (optional parameter `--queries`) is reached. This step results, for each considered account, in a sequence of public events (belonging to 15 different event types).
+For each user account ,the tool will query the GitHub Events API with 100 events per query until the maximum number of queries (not more than 3) have been reached.
+ 2. Convert the extracted events into activities (belonging to 24 different activity types) performed by the user account. 
+ 3. Use the activity sequence of the user account to compute the following features: mean Number of Activities per activity Type (NAT_mean), Number of activity Types (NT), median time (Delta) between Consecutive Activities of different Types (DCAT_median), Number of Owners of Repositories contributed to (NOR), Gini inequality of Duration of Consecutive Activities (DCA_gini) and mean Number of Activities per Repository (NAR_mean). 
+ 4. Apply a classification model (that was trained on activities performed by 386 bot accounts and 415 human accounts and evaluated on activities performed by 258 bot accounts and 276 human accounts) to predict the user account type along with the confidence of the prediction.
 
-This tool accepts a text file of GitHub account names (one account name per line), GitHub API key and the user-name associated with the key to give in predictions after the following four steps.
-The first step consists of extracting the public events performed by accounts in GitHub. If the number of events is less than the provided threshold (`--min-events`), then more events will be queried until maximum number of queries (`--queries`)is reached. This step results in a set of events. 
-The second step identifies activities (belonging to 24 different activity types) performed by the account in GitHub. 
-The third step constitutes identifying the account behavioural features, namely, mean Number of Activities per activity Type (NAT_mean), Number of activity Types (NT), median time (Delta) between Consecutive Activities of different Types (DCAT_median), Number of Owners of Repositories contributed to (NOR), Gini inequality of Duration of Consecutive Activities (DCA_gini) and mean Number of Activities per Repository (NAR_mean). 
-The forth step simply applies the classification model that we trained on activities performed by 386 bots and 415 humans and evaluated on activities performed by 258 bots and 276 human accounts in GitHub and gives the prediction on the type of account along with the prediction confidence.
+***Note about misclassifications.*** **RABBIT** is based on a machine learning classifier that is trained and validated on a ground-truth dataset, and therefore cannot reach a precision and recall of 100%.
+When running the tool on a set of GitHub user accounts, it is therefore possible that the tool misclassifies some bots as humans, or vice versa. 
+A known reason for such misclassifications is if the user account has generated very few GitHub events.
+If you should encounter such misclassifications after running the tool, please inform us about it, so that we can strive to further improve the accuracy of the classification model. 
+Considering the restrictions imposed on using the GitHub Events API, to enable the tool to be used in practice, we trained, validated and tested the classification model for all user accounts in our ground-truth dataset by making 3 queries to the GitHub Events API as on 14 November 2023. 
+We imposed as a lower bound condition that a user account should have performed at least 5 events to predict its type.
 
-**Note about misclassifications** The tool is based on a machine learning classifier that is trained and validated on a ground-truth dataset if the account is bot or human along with their activity sequences, and cannot reach a precision and recall of 100%. 
-When running the tool on a set of GitHub accounts of your choice, it is therefore possible that the tool may produce misclassifications in practice (humans misclassified as bots, or vice versa). 
-If you encounter such situations while running the tool, please inform us about it, so that we can strive to further improve the accuracy of the classification algorithm. A known reason for the presence of misclassifications is the presence of very few activities in GitHub.
-Since we considered the practical limitations of GitHub Events API, and to enable the tool to be used in practice, we trained, validated and tested the classification model by making 3 queries to the GitHub Events API as on 14 November 2023 for all the accounts in our collection. Also, we applied a lower bound condition that a contributor should have performed at least 5 events to predict their type.
-The tool will query the GitHub Events API with 100 events per query until the required user's number of queries (through optional parameters) or until 3 queries have been made per account to the GitHub Events API.
 
-## Submission
-The tool is part of an empirical research endeavour aiming to identify bots in GitHub based on recent their activities in GitHub repositories. An associated research paper is submitted at the International Conference on Mining Software Repositories 2024 (MSR2024) - Data and Tool Showcase Track under the title "**RABBIT: A tool for identifying bot accounts based on their recent GitHub event history**"
+## Citing this tool
+**RABBIT** is part of an empirical research aiming to identify bots in GitHub based on recent their activities. To refer to this tool in any scientific (or other) publication, please use the following citation:
+  
+* **RABBIT: A tool for identifying bot accounts based on their recent GitHub event history.** Natarajan Chidambaram, Alexandre Decan, Tom Mens. *International Conference on Mining Software Repositories - Data and Tool Showcase Track*, 2024.
 
 ## Installation
-Given that this tool has many dependencies, and in order not to conflict with already installed packages, it is recommended to use a virtual environment before its installation. You can install and create a _Python virtual environment_ and then install and run the tool in this environment. You can use any virtual environment of your choice. Below are the steps to install and create a virtual environment with **virtualenv**.
+Given that **RABBIT** has multiple dependencies, and in order not to conflict with already installed packages, we recommended to install and create a _Python virtual environment_ and then install and run the tool in this environment. You can use any virtual environment of your choice. Below are the steps to do so with **virtualenv**.
 
-Use the following command to install the virtual environment:
+Install the virtual environment tool:
 ```
 pip install virtualenv
 ```
@@ -29,83 +33,96 @@ Create a virtual environment in the folder where you want to place your files:
 ```
 virtualenv <name>
 ```
-Start using the environment by:
+Start the environment:
 ```
 source <name>/bin/activate
 ```
-After running this command your command line prompt will change to `(<name>) ...` and now you can install RABBIT with the pip command.
-When you are finished running the tool, you can quit the environment by:
-```
-deactivate
-```
-To install RABBIT, execute the following command:
+After running this command your command line prompt will change to `(<name>) ...`.
+Now you can install **RABBIT** with the following pip command. (You only need to do this once.)
 ```
 pip install git+https://github.com/natarajan-chidambaram/RABBIT
+```
+
+Start using **RABBIT** (usage instructions are below).
+When you are finished, quit the virtual environment:
+```
+deactivate
 ```
 
 ## Usage
 To execute **RABBIT**, you need to provide a *GitHub personal access token* (API key). You can follow the instructions [here](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token) to obtain such a token.
 
-You can execute the tool with all default parameters by running `rabbit <path/to/names.txt> --key <token> --username <GitHub username to which the token belongs>`
+You can execute the tool with all default parameters by running
+
+`rabbit <path/to/names.txt> --key <your API key> --username <your GitHub login>`
 
 Here is the list of parameters:
 
 `<names.txt>`                    **This is positional argument, should be provided as the first input to the tool**
-> Example: $ rabbit path/to/names.txt --key token --username username
+> Example: $ rabbit path/to/names.txt --key token --username login
 
-_This input is mandatory and should specify path to a text file containing all the GitHub account names that need to be analysed. Each account name should be on a separate line in the file._
+_This input is mandatory and should specify path to a text file containing all the login names of the GitHub user accounts that need to be analysed. Each login name should appear on a separate line in the file._
 
-`--key <APIKEY>` 			**GitHub personal access token (key) required to extract events from the GitHub Events API**
-> Example: $ rabbit path/to/names.txt --key token --username username
+`--key <APIKEY>` 			**GitHub personal access token (API key) required to extract events from the GitHub Events API**
+> Example: $ rabbit path/to/names.txt --key token --username login
 
-_This parameter is mandatory and you can obtain an access token as described earlier_
+_This parameter is mandatory._
 
-`--username <USERNAME>`         **GitHub user name associated to the key required to extract events from the GitHub Events API**
-> Example: $ rabbit path/to/names.txt --key token --username username
+`--username <LOGIN>`         **login for the GitHub user account associated to the API key**
+> Example: $ rabbit path/to/names.txt --key token --username login
 
-_This parameter is mandatory_
+_This parameter is mandatory._
 
-`--start-time <START_TIME>` 		**Start time to be considered for anlysing the account's activity**
-> Example: $ rabbit path/to/names.txt --key token --username username --start-time '2023-01-01 00:00:00'
+`--start-time <START_TIME>` 		**Start time to be considered for analysing the accounts' event sequences**
+> Example: $ rabbit path/to/names.txt --key token --username login --start-time '2023-01-01 00:00:00'
 
 _The default start-time is 90 days before the current time._
 
-`--min-events <MIN_EVENTS>` 		**Minimum number of events that are required to make a prediction**
-> Example: $ rabbit path/to/names.txt --key token --username username --min-events 10
+`--min-events <MIN_EVENTS>` 		**Minimum number of events required for each account to make a prediction**
+> Example: $ rabbit path/to/names.txt --key token --username login --min-events 10
 
 _The default minimum number of events is 5._
 
-`--queries <NUM_QUERIES>` 		**Number of queries that will be made to the GitHub Events API for each account**
-> Example: $ rabbit path/to/names.txt --key token --username username --queries 2
+`--queries <NUM_QUERIES>` 		**Number of queries to be made to the GitHub Events API for each account**
+> Example: $ rabbit path/to/names.txt --key token --username login --queries 2
 
-_The default number of queries is 3, allowed values are 1, 2 or 3._
+_The default number of queries is 3, allowed values are 1, 2 or 3. A single query can retrieve up to 100 events._
 
-`--verbose`              		**Also report the values of the features that were used to make the prediction**
-> Example: $ rabbit path/to/names.txt --key token --username username --verbose
+`--verbose`              		**Report the values of the features that were used to make the prediction**
+> Example: $ rabbit path/to/names.txt --key token --username login --verbose
 
 _The default value is False._
 
-`--csv <FILE_NAME.csv>`                		Saves the result in comma-separated values (csv) format
-`--json <FILE_NAME.json>`                	Outputs the result in json format
-> Example: $ rabbit path/to/names.txt --key token --username username --json output.json
+`--csv <FILE_NAME.csv>`                		Outputs the result in comma-separated values (csv) format
+
+`--json <FILE_NAME.json>`                	Outputs the result in JSON format
+> Example: $ rabbit path/to/names.txt --key token --username login --json output.json
 
 `--min-confidence`              	**Minimum confidence required to report the prediction for an account**
-> Example: $ rabbit path/to/names.txt --key token --username username --min-confidence 0.5
+> Example: $ rabbit path/to/names.txt --key token --username login --min-confidence 0.5
 
 _The default minimum confidence is 0.0._
 
 `--incremental`              		**Method of reporting the results**
 > Example: $ rabbit path/to/names.txt --key token --username username --incremental
 
-_The default value is False._
-
-_If provided, the result will be printed on the screen or saved to the file once the prediction is made for each account. If not provided, the results will be printed/stored after making prediction for all the accounts in the provided list._
+_If this parameter is not provided, the results will only be output after making a prediction for all the accounts provided as input.
+If it is provided, the results will be output incrementally for each account as soon as a prediction is made for that account._
 
 ## Examples of RABBIT output (for illustration purposes only)
 
+**With required parameters only**
+```
+$ rabbit names.txt --username login --key token
+                   account      events      prediction      confidence
+1       tensorflow-jenkins         160             bot           0.993
+2       johnpbloch-bot             300             bot           0.996
+3    natarajan-chidambaram          74           human           0.984   
+```
+
 **With --start-time**
 ```
-$ rabbit names.txt --username username --key token --start-time '2023-09-19 00:00:00'
+$ rabbit names.txt --username login --key token --start-time '2023-09-19 00:00:00'
                    account      events      prediction     confidence
 1       tensorflow-jenkins         112             bot          0.978
 2       johnpbloch-bot             300             bot          0.996
@@ -113,23 +130,15 @@ $ rabbit names.txt --username username --key token --start-time '2023-09-19 00:0
 
 **With --min-events**
 ```
-$ rabbit names.txt --username username --key token --min-events 10
+$ rabbit names.txt --username login --key token --min-events 10
                    account      events      prediction      confidence
 1       tensorflow-jenkins         160             bot           0.993
 2       johnpbloch-bot             300             bot           0.996
 ```
 
-**With human contributor**
-```
-$ rabbit names.txt --username username --key token
-                   account      events      prediction      confidence
-1       tensorflow-jenkins         160             bot           0.993
-2       johnpbloch-bot             300             bot           0.996
-3    natarajan-chidambaram          74           human           0.984   
-```
 **With --queries**
 ```
-$ rabbit names.txt --username username --key token --queries 1
+$ rabbit names.txt --username login --key token --queries 1
                    account      events      prediction      confidence
 1       tensorflow-jenkins         100             bot           0.956
 2       johnpbloch-bot             100             bot           0.976
@@ -138,7 +147,7 @@ $ rabbit names.txt --username username --key token --queries 1
 
 **With --verbose**
 ```
-$ rabbit names.txt --username username --key token --verbose
+$ rabbit names.txt --username login --key token --verbose
                    account      events      activites      NAT_mean      NT      DCAT_median      NOR      DCA_gini      NAR_mean      prediction      confidence
 1       tensorflow-jenkins         160            160          40.0     4.0             2.39      2.0         0.426        53.333             bot           0.993
 2       johnpbloch-bot             300            300         100.0     3.0            0.001      1.0         0.872         100.0             bot           0.996
@@ -147,16 +156,16 @@ $ rabbit names.txt --username username --key token --verbose
 
 **With --csv or --json**
 ```
-$ rabbit names.txt --username username --key token --csv predictions.csv
+$ rabbit names.txt --username login --key token --csv predictions.csv
 ```
 
 ```
-$ rabbit names.txt --username username --key token --json predictions.json
+$ rabbit names.txt --username login --key token --json predictions.json
 ```
 
 **With --min-confidence**
 ```
-$ rabbit names.txt --username username --key token --min-confidence 0.7
+$ rabbit names.txt --username login --key token --min-confidence 0.7
                    account      events      prediction                  confidence
 1       tensorflow-jenkins         160             bot                       0.993
 2       johnpbloch-bot             300             bot                       0.996
@@ -165,7 +174,7 @@ $ rabbit names.txt --username username --key token --min-confidence 0.7
 
 **With --incremental**
 ```
-$ rabbit names.txt --username username --key token --incremental
+$ rabbit names.txt --username login --key token --incremental
 ```
 
 ## License
