@@ -124,13 +124,13 @@ def QueryEvents(contributor, username, key, page):
     
     return(list_event, query_failed)
 
-def MakePrediction(contributor, username, apikey, min_events, num_queries, time_after, verbose, min_confidence):
+def MakePrediction(contributor, username, apikey, min_events, max_queries, time_after, verbose, min_confidence):
     '''
     args: contributor (str) - name of the contributor for whom the prediciton needs to be made
           username (str) - name of the account to which the GitHub API key is associated with
           apikey (str) - the API key
           min_events (int) - minimum number of events that a contributor should have performed to consider them for prediciton
-          num_queries (int) - number of queries to be made to GitHub Events API
+          max_queries (int) - maximum number of queries to be made to GitHub Events API
           time_after (datetime) - Events that are made after this time_after are considered
           verbose (bool) - If True, displays the features that were used to make the prediction
           min_confidence (float) - minimum confidence score on the prediction to provide the contributor type 
@@ -152,7 +152,7 @@ def MakePrediction(contributor, username, apikey, min_events, num_queries, time_
                     'DCAT_median','NOR',
                     'DCA_gini','NAR_mean']
     result_cols = all_features + ['prediction','confidence']
-    while(page <= num_queries):
+    while(page <= max_queries):
         events, query_failed = QueryEvents(contributor, username, apikey, page)
         if(len(events)>0):
             df_events_obt = pd.concat([df_events_obt, pd.DataFrame.from_dict(events, orient = 'columns').assign(page=page)])
@@ -224,13 +224,13 @@ def MakePrediction(contributor, username, apikey, min_events, num_queries, time_
         result = result[['events','prediction','confidence']]
     return(result)
 
-def get_results(contributors_name_file, username, apikey, min_events, num_queries, time_after, output_type, save_path, verbose, min_confidence, incremental):
+def get_results(contributors_name_file, username, apikey, min_events, max_queries, time_after, output_type, save_path, verbose, min_confidence, incremental):
     '''
     args: contributors_name_file (str) - path to the csv file containing contributors names for which the predicitons need to be made
           username (str) - name of the account to which the GitHub API key is associated with
           apikey (str) - the API key
           min_events (int) - minimum number of events that a contributor should have performed to consider them for prediciton
-          num_queries (int) - number of queries to be made to GitHub Events API
+          max_queries (int) - maximum number of queries to be made to GitHub Events API
           time_after (datetime) - events that are made after this time_after are considered
           verbose (bool) - if True, displays the features that were used to make the prediction
           result (DataFrame) - DataFrame of prediction results
@@ -248,7 +248,7 @@ def get_results(contributors_name_file, username, apikey, min_events, num_querie
     contributors = pd.read_csv(contributors_name_file, sep=' ', header=None, index_col=0).index.to_list()
     all_results = pd.DataFrame()
     for contributor in tqdm(contributors):
-        prediction_result = MakePrediction(contributor, username, apikey, min_events, num_queries, time_after, verbose, min_confidence)
+        prediction_result = MakePrediction(contributor, username, apikey, min_events, max_queries, time_after, verbose, min_confidence)
         all_results = pd.concat([all_results, prediction_result])
         if incremental:
             save_results(all_results, output_type, save_path)
@@ -290,8 +290,8 @@ def arg_parser():
         '--min-events', metavar='MIN_EVENTS', type=int, required=False, default=5,
         help='Minimum number of events that are required to make a prediction. The default minimum number of events is 5.')
     parser.add_argument(
-        '--queries', metavar='QUERIES', type=int, required=False, default=3, choices=[1,2,3],
-        help='Number of queries to be made to the GitHub Events API for each account. The default number of queries is 3, allowed values are 1, 2 or 3.')
+        '--max-queries', metavar='MAXQUERIES', type=int, required=False, default=3, choices=[1,2,3],
+        help='Maximum number of queries to be made to the GitHub Events API for each account. The default number of queries is 3, allowed values are 1, 2 or 3.')
     parser.add_argument(
         '--key', metavar='APIKEY', required=True, type=str, default='',
         help='GitHub API key to extract events from GitHub Events API')
@@ -360,7 +360,7 @@ Please read more about it in the repository readme file.')
                 username, 
                 apikey, 
                 min_events, 
-                args.queries, 
+                args.max_queries, 
                 time_after, 
                 output_type,
                 save_path,  
