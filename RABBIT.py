@@ -220,7 +220,7 @@ def MakePrediction(contributor, username, apikey, min_events, max_queries, time_
                         'DCA_gini','NAR_mean',
                         'prediction','confidence']]
     else:
-        result = result[['events','prediction','confidence']]
+        result = result[['prediction','confidence']]
     return(result)
 
 def get_results(contributors_name_file, username, apikey, min_events, max_queries, time_after, output_type, save_path, verbose, incremental):
