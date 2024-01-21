@@ -75,7 +75,7 @@ _The default start-time is 90 days before the current time._
 
 _The default minimum number of events is 5._
 
-`--queries <NUM_QUERIES>` 		**Number of queries that will be made to the GitHub Events API for each account**
+`--max-queries <NUM_QUERIES>` 		**Number of queries that will be made to the GitHub Events API for each account**
 > Example: $ rabbit path/to/names.txt --key token --username username --queries 2
 
 _The default number of queries is 3, allowed values are 1, 2 or 3._
@@ -89,11 +89,6 @@ _The default value is False._
 `--json <FILE_NAME.json>`                	Outputs the result in json format
 > Example: $ rabbit path/to/names.txt --key token --username username --json output.json
 
-`--min-confidence`              	**Minimum confidence required to report the prediction for an account**
-> Example: $ rabbit path/to/names.txt --key token --username username --min-confidence 0.5
-
-_The default minimum confidence is 0.0._
-
 `--incremental`              		**Method of reporting the results**
 > Example: $ rabbit path/to/names.txt --key token --username username --incremental
 
@@ -106,43 +101,44 @@ _If provided, the result will be printed on the screen or saved to the file once
 **With --start-time**
 ```
 $ rabbit names.txt --username username --key token --start-time '2023-09-19 00:00:00'
-                   account      events      prediction     confidence
-1       tensorflow-jenkins         112             bot          0.978
-2       johnpbloch-bot             300             bot          0.996
+                  account      prediction     confidence
+       tensorflow-jenkins             bot          0.978
+           johnpbloch-bot             bot          0.996
 ```
 
 **With --min-events**
 ```
 $ rabbit names.txt --username username --key token --min-events 10
-                   account      events      prediction      confidence
-1       tensorflow-jenkins         160             bot           0.993
-2       johnpbloch-bot             300             bot           0.996
+                  account      prediction      confidence
+       tensorflow-jenkins             bot           0.993
+           johnpbloch-bot             bot           0.996
 ```
 
 **With human contributor**
 ```
 $ rabbit names.txt --username username --key token
-                   account      events      prediction      confidence
-1       tensorflow-jenkins         160             bot           0.993
-2       johnpbloch-bot             300             bot           0.996
-3    natarajan-chidambaram          74           human           0.984   
+                  account      prediction      confidence
+       tensorflow-jenkins             bot           0.993
+           johnpbloch-bot             bot           0.996
+    natarajan-chidambaram           human           0.984   
 ```
-**With --queries**
+
+**With --max-queries**
 ```
-$ rabbit names.txt --username username --key token --queries 1
-                   account      events      prediction      confidence
-1       tensorflow-jenkins         100             bot           0.956
-2       johnpbloch-bot             100             bot           0.976
-3    natarajan-chidambaram          74           human           0.984
+$ rabbit names.txt --username username --key token --max-queries 1
+                  account      prediction      confidence
+       tensorflow-jenkins             bot           0.956
+           johnpbloch-bot             bot           0.976
+    natarajan-chidambaram           human           0.984
 ```
 
 **With --verbose**
 ```
 $ rabbit names.txt --username username --key token --verbose
-                   account      events      activites      NAT_mean      NT      DCAT_median      NOR      DCA_gini      NAR_mean      prediction      confidence
-1       tensorflow-jenkins         160            160          40.0     4.0             2.39      2.0         0.426        53.333             bot           0.993
-2       johnpbloch-bot             300            300         100.0     3.0            0.001      1.0         0.872         100.0             bot           0.996
-3    natarajan-chidambaram          74             74          14.8     5.0            0.211      3.0         0.951          24.5           human           0.984
+                  account      events      activites      NAT_mean      NT      DCAT_median      NOR      DCA_gini      NAR_mean      prediction      confidence
+       tensorflow-jenkins         160            160          40.0     4.0             2.39      2.0         0.426        53.333             bot           0.993
+           johnpbloch-bot         300            300         100.0     3.0            0.001      1.0         0.872         100.0             bot           0.996
+    natarajan-chidambaram          74             74          14.8     5.0            0.211      3.0         0.951          24.5           human           0.984
 ```
 
 **With --csv or --json**
@@ -152,15 +148,6 @@ $ rabbit names.txt --username username --key token --csv predictions.csv
 
 ```
 $ rabbit names.txt --username username --key token --json predictions.json
-```
-
-**With --min-confidence**
-```
-$ rabbit names.txt --username username --key token --min-confidence 0.7
-                   account      events      prediction                  confidence
-1       tensorflow-jenkins         160             bot                       0.993
-2       johnpbloch-bot             300             bot                       0.996
-3       boring-cyborg[bot]          36         Unknown      < confidence threshold
 ```
 
 **With --incremental**
