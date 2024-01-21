@@ -124,7 +124,7 @@ def QueryEvents(contributor, username, key, page):
     
     return(list_event, query_failed)
 
-def MakePrediction(contributor, username, apikey, min_events, max_queries, time_after, verbose, min_confidence):
+def MakePrediction(contributor, username, apikey, min_events, max_queries, time_after, verbose):
     '''
     args: contributor (str) - name of the contributor for whom the prediciton needs to be made
           username (str) - name of the account to which the GitHub API key is associated with
@@ -133,7 +133,6 @@ def MakePrediction(contributor, username, apikey, min_events, max_queries, time_
           max_queries (int) - maximum number of queries to be made to GitHub Events API
           time_after (datetime) - Events that are made after this time_after are considered
           verbose (bool) - If True, displays the features that were used to make the prediction
-          min_confidence (float) - minimum confidence score on the prediction to provide the contributor type 
     
     returns: activity_features (array) - an array of 7 features and the probability that the contributor is a bot
 
@@ -197,9 +196,9 @@ def MakePrediction(contributor, username, apikey, min_events, max_queries, time_
             model = get_model()
             probability = model.predict_proba(activity_features)
             prediction, confidence = compute_confidence(probability[0][1])
-            if(confidence<=min_confidence):
-                prediction = 'unknown'
-                confidence = '< confidence threshold'
+            # if(confidence<=min_confidence):
+            #     prediction = 'unknown'
+            #     confidence = '< confidence threshold'
         
         else:
             prediction = 'unknown'
@@ -224,7 +223,7 @@ def MakePrediction(contributor, username, apikey, min_events, max_queries, time_
         result = result[['events','prediction','confidence']]
     return(result)
 
-def get_results(contributors_name_file, username, apikey, min_events, max_queries, time_after, output_type, save_path, verbose, min_confidence, incremental):
+def get_results(contributors_name_file, username, apikey, min_events, max_queries, time_after, output_type, save_path, verbose, incremental):
     '''
     args: contributors_name_file (str) - path to the csv file containing contributors names for which the predicitons need to be made
           username (str) - name of the account to which the GitHub API key is associated with
@@ -235,8 +234,7 @@ def get_results(contributors_name_file, username, apikey, min_events, max_querie
           verbose (bool) - if True, displays the features that were used to make the prediction
           result (DataFrame) - DataFrame of prediction results
           save_path (str) - the path along with file name and extension to save the prediction results
-          output_type (str) - to convert the results to csv or json
-          min_confidence (float) - minimum confidence score on the prediction to provide the contributor type 
+          output_type (str) - to convert the results to csv or json 
           incremental (bool) - Update the output file/print on terminal once new predictions are made. If False, 
                           results will be accessible only after the predicitons are made for all the contributors
     
@@ -248,7 +246,7 @@ def get_results(contributors_name_file, username, apikey, min_events, max_querie
     contributors = pd.read_csv(contributors_name_file, sep=' ', header=None, index_col=0).index.to_list()
     all_results = pd.DataFrame()
     for contributor in tqdm(contributors):
-        prediction_result = MakePrediction(contributor, username, apikey, min_events, max_queries, time_after, verbose, min_confidence)
+        prediction_result = MakePrediction(contributor, username, apikey, min_events, max_queries, time_after, verbose)
         all_results = pd.concat([all_results, prediction_result])
         if incremental:
             save_results(all_results, output_type, save_path)
@@ -304,9 +302,9 @@ def arg_parser():
     parser.add_argument(
         '--json', metavar='FILE_NAME.json', required=False, type=str, default='',
         help='Saves the result in json format.')
-    parser.add_argument(
-        '--min-confidence', metavar='MIN_CONFIDENCE', required=False, type=float, default=0.0, 
-        help='Minimum confidence required to report the prediction for an account. The default minimum confidence is 0.0.')
+    # parser.add_argument(
+    #     '--min-confidence', metavar='MIN_CONFIDENCE', required=False, type=float, default=0.0, 
+    #     help='Minimum confidence required to report the prediction for an account. The default minimum confidence is 0.0.')
     parser.add_argument(
         '--incremental', action="store_true", required=False, default=False, 
         help='Method of reporting the results - incremental/all at once. The default value is False.')
@@ -365,7 +363,7 @@ Please read more about it in the repository readme file.')
                 output_type,
                 save_path,  
                 args.verbose,
-                args.min_confidence,
+                # args.min_confidence,
                 args.incremental)
 
 if __name__ == '__main__':
