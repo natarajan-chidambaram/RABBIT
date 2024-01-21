@@ -265,7 +265,7 @@ def save_results(all_results, output_type, save_path):
     description: Save the results in the given path
     '''
     if output_type == 'text':
-        print(all_results.reset_index(names=['account']))
+        print(all_results.reset_index(names=['account']).to_string(index=False))
     elif(output_type == 'csv'):
         all_results.reset_index(names=['account']).to_csv(save_path)
     elif(output_type == 'json'):
@@ -283,7 +283,7 @@ def arg_parser():
                             The default start-time is 91 days before the current time.')
     parser.add_argument(
         '--verbose', action="store_true", required=False, default=False,
-        help='Also report the values of the features that were used to make the prediction. The default value is False.')
+        help='Also report the values of the number of events, number of identified activities and features that were used to make the prediction. The default value is False.')
     parser.add_argument(
         '--min-events', metavar='MIN_EVENTS', type=int, required=False, default=5,
         help='Minimum number of events that are required to make a prediction. The default minimum number of events is 5.')
