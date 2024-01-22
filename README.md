@@ -3,8 +3,8 @@
 RABBIT is a recursive acronym for "Rabbit is an Activity-Based Bot Identification Tool".
 It is a command-line tool based on machine learning classifiers to identify whether a GitHub account is bot or human based on its recent GitHub event sequence.
 
-This tool accepts a text file of GitHub account names (one account name per line), GitHub API key and the user-name associated with the key to give in predictions after the following four steps.
-The first step consists of extracting the public events performed by accounts in GitHub. If the number of events is less than the provided threshold (`--min-events`), then more events will be queried until maximum number of queries (`--queries`)is reached. This step results in a set of events. 
+This tool accepts an account name and/or a text file of GitHub account names (one account name per line), GitHub API key and the user-name associated with the key to give in predictions after the following four steps.
+The first step consists of extracting the public events performed by accounts in GitHub. If the number of events is less than the provided threshold (`--min-events`), then more events will be queried until maximum number of queries (`--max-queries`)is reached. This step results in a set of events. 
 The second step identifies activities (belonging to 24 different activity types) performed by the account in GitHub. 
 The third step constitutes identifying the account behavioural features, namely, mean Number of Activities per activity Type (NAT_mean), Number of activity Types (NT), median time (Delta) between Consecutive Activities of different Types (DCAT_median), Number of Owners of Repositories contributed to (NOR), Gini inequality of Duration of Consecutive Activities (DCA_gini) and mean Number of Activities per Repository (NAR_mean). 
 The forth step simply applies the classification model that we trained on activities performed by 386 bots and 415 humans and evaluated on activities performed by 258 bots and 276 human accounts in GitHub and gives the prediction on the type of account along with the prediction confidence.
@@ -50,10 +50,13 @@ You can execute the tool with all default parameters by running `rabbit <path/to
 
 Here is the list of parameters:
 
-`<names.txt>`                    **This is positional argument, should be provided as the first input to the tool**
+`--file <names.txt>`            **For predicting type of multiple accounts, a .txt file with the login names (one name per line) of the accounts should be provided to the tool.**
 > Example: $ rabbit path/to/names.txt --key token --username username
 
-_This input is mandatory and should specify path to a text file containing all the GitHub account names that need to be analysed. Each account name should be on a separate line in the file._
+`--u <LOGIN_NAME>`            **For predicting type of single account, the login name of the account should be provided to the tool.**
+> Example: $ rabbit path/to/names.txt --key token --username username
+
+_Either of the above inputs `--file` or `--u` is mandatory for the tool. In case if both are given, then the accounts given with `--file` will be processed after the account given in `--u` is processed._
 
 `--key <APIKEY>` 			**GitHub personal access token (key) required to extract events from the GitHub Events API**
 > Example: $ rabbit path/to/names.txt --key token --username username
@@ -80,7 +83,7 @@ _The default minimum number of events is 5._
 
 _The default number of queries is 3, allowed values are 1, 2 or 3._
 
-`--verbose`              		**Also report the values of the features that were used to make the prediction**
+`--verbose`              		**Also report the #events, #activities and values of the features that were used to make the prediction**
 > Example: $ rabbit path/to/names.txt --key token --username username --verbose
 
 _The default value is False._
@@ -97,6 +100,30 @@ _The default value is False._
 _If provided, the result will be printed on the screen or saved to the file once the prediction is made for each account. If not provided, the results will be printed/stored after making prediction for all the accounts in the provided list._
 
 ## Examples of RABBIT output (for illustration purposes only)
+
+**With --file**
+```
+$ rabbit --file names.txt --username username --key token
+                  account      prediction     confidence
+       tensorflow-jenkins             bot          0.978
+           johnpbloch-bot             bot          0.996
+```
+
+**With --u**
+```
+$ rabbit --u tensorflow-jenkins --username username --key token
+                  account      prediction     confidence
+       tensorflow-jenkins             bot          0.978
+```
+
+**With --file and --u**
+```
+$ rabbit --u tensorflow-jenkins --file names.txt --username username --key token
+                  account      prediction     confidence
+       tensorflow-jenkins             bot          0.978
+           johnpbloch-bot             bot          0.996
+    natarajan-chidambaram           human          0.984 
+```
 
 **With --start-time**
 ```
