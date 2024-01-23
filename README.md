@@ -46,54 +46,54 @@ pip install git+https://github.com/natarajan-chidambaram/RABBIT
 ## Usage
 To execute **RABBIT**, you need to provide a *GitHub personal access token* (API key). You can follow the instructions [here](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token) to obtain such a token.
 
-You can execute the tool with all default parameters by running `rabbit <path/to/names.txt> --key <token> --username <GitHub username to which the token belongs>`
+You can execute the tool with all default parameters by running `rabbit <path/to/names.txt> --key <token> --username <GitHub login to which the token belongs>`
 
 Here is the list of parameters:
 
 `--file <names.txt>`            **For predicting type of multiple accounts, a .txt file with the login names (one name per line) of the accounts should be provided to the tool.**
-> Example: $ rabbit path/to/names.txt --key token --username username
+> Example: $ rabbit path/to/names.txt --key token --username login
 
 `--u <LOGIN_NAME>`            **For predicting type of single account, the login name of the account should be provided to the tool.**
-> Example: $ rabbit path/to/names.txt --key token --username username
+> Example: $ rabbit path/to/names.txt --key token --username login
 
 _Either of the above inputs `--file` or `--u` is mandatory for the tool. In case if both are given, then the accounts given with `--file` will be processed after the account given in `--u` is processed._
 
 `--key <APIKEY>` 			**GitHub personal access token (key) required to extract events from the GitHub Events API**
-> Example: $ rabbit path/to/names.txt --key token --username username
+> Example: $ rabbit path/to/names.txt --key token --username login
 
 _This parameter is mandatory and you can obtain an access token as described earlier_
 
-`--username <USERNAME>`         **GitHub user name associated to the key required to extract events from the GitHub Events API**
-> Example: $ rabbit path/to/names.txt --key token --username username
+`--username <LOGIN>`         **GitHub user name associated to the key required to extract events from the GitHub Events API**
+> Example: $ rabbit path/to/names.txt --key token --username login
 
 _This parameter is mandatory_
 
 `--start-time <START_TIME>` 		**Start time to be considered for anlysing the account's activity**
-> Example: $ rabbit path/to/names.txt --key token --username username --start-time '2023-01-01 00:00:00'
+> Example: $ rabbit path/to/names.txt --key token --username login --start-time '2023-01-01 00:00:00'
 
 _The default start-time is 90 days before the current time._
 
 `--min-events <MIN_EVENTS>` 		**Minimum number of events that are required to make a prediction**
-> Example: $ rabbit path/to/names.txt --key token --username username --min-events 10
+> Example: $ rabbit path/to/names.txt --key token --username login --min-events 10
 
 _The default minimum number of events is 5._
 
 `--max-queries <NUM_QUERIES>` 		**Number of queries that will be made to the GitHub Events API for each account**
-> Example: $ rabbit path/to/names.txt --key token --username username --queries 2
+> Example: $ rabbit path/to/names.txt --key token --username login --queries 2
 
 _The default number of queries is 3, allowed values are 1, 2 or 3._
 
 `--verbose`              		**Also report the #events, #activities and values of the features that were used to make the prediction**
-> Example: $ rabbit path/to/names.txt --key token --username username --verbose
+> Example: $ rabbit path/to/names.txt --key token --username login --verbose
 
 _The default value is False._
 
 `--csv <FILE_NAME.csv>`                		Saves the result in comma-separated values (csv) format
 `--json <FILE_NAME.json>`                	Outputs the result in json format
-> Example: $ rabbit path/to/names.txt --key token --username username --json output.json
+> Example: $ rabbit path/to/names.txt --key token --username login --json output.json
 
 `--incremental`              		**Method of reporting the results**
-> Example: $ rabbit path/to/names.txt --key token --username username --incremental
+> Example: $ rabbit path/to/names.txt --key token --username login --incremental
 
 _The default value is False._
 
@@ -103,7 +103,7 @@ _If provided, the result will be printed on the screen or saved to the file once
 
 **With --file**
 ```
-$ rabbit --file names.txt --username username --key token
+$ rabbit --file names.txt --username login --key token
                   account      prediction     confidence
        tensorflow-jenkins             bot          0.978
            johnpbloch-bot             bot          0.996
@@ -111,14 +111,14 @@ $ rabbit --file names.txt --username username --key token
 
 **With --u**
 ```
-$ rabbit --u tensorflow-jenkins --username username --key token
+$ rabbit --u tensorflow-jenkins --username login --key token
                   account      prediction     confidence
        tensorflow-jenkins             bot          0.978
 ```
 
 **With --file and --u**
 ```
-$ rabbit --u tensorflow-jenkins --file names.txt --username username --key token
+$ rabbit --u tensorflow-jenkins --file names.txt --username login --key token
                   account      prediction     confidence
        tensorflow-jenkins             bot          0.978
            johnpbloch-bot             bot          0.996
@@ -127,7 +127,7 @@ $ rabbit --u tensorflow-jenkins --file names.txt --username username --key token
 
 **With --start-time**
 ```
-$ rabbit names.txt --username username --key token --start-time '2023-09-19 00:00:00'
+$ rabbit names.txt --username login --key token --start-time '2023-09-19 00:00:00'
                   account      prediction     confidence
        tensorflow-jenkins             bot          0.978
            johnpbloch-bot             bot          0.996
@@ -135,7 +135,7 @@ $ rabbit names.txt --username username --key token --start-time '2023-09-19 00:0
 
 **With --min-events**
 ```
-$ rabbit names.txt --username username --key token --min-events 10
+$ rabbit names.txt --username login --key token --min-events 10
                   account      prediction      confidence
        tensorflow-jenkins             bot           0.993
            johnpbloch-bot             bot           0.996
@@ -143,7 +143,7 @@ $ rabbit names.txt --username username --key token --min-events 10
 
 **With human contributor**
 ```
-$ rabbit names.txt --username username --key token
+$ rabbit names.txt --username login --key token
                   account      prediction      confidence
        tensorflow-jenkins             bot           0.993
            johnpbloch-bot             bot           0.996
@@ -152,7 +152,7 @@ $ rabbit names.txt --username username --key token
 
 **With --max-queries**
 ```
-$ rabbit names.txt --username username --key token --max-queries 1
+$ rabbit names.txt --username login --key token --max-queries 1
                   account      prediction      confidence
        tensorflow-jenkins             bot           0.956
            johnpbloch-bot             bot           0.976
@@ -161,7 +161,7 @@ $ rabbit names.txt --username username --key token --max-queries 1
 
 **With --verbose**
 ```
-$ rabbit names.txt --username username --key token --verbose
+$ rabbit names.txt --username login --key token --verbose
                   account      events      activites      NAT_mean      NT      DCAT_median      NOR      DCA_gini      NAR_mean      prediction      confidence
        tensorflow-jenkins         160            160          40.0     4.0             2.39      2.0         0.426        53.333             bot           0.993
            johnpbloch-bot         300            300         100.0     3.0            0.001      1.0         0.872         100.0             bot           0.996
@@ -170,16 +170,16 @@ $ rabbit names.txt --username username --key token --verbose
 
 **With --csv or --json**
 ```
-$ rabbit names.txt --username username --key token --csv predictions.csv
+$ rabbit names.txt --username login --key token --csv predictions.csv
 ```
 
 ```
-$ rabbit names.txt --username username --key token --json predictions.json
+$ rabbit names.txt --username login --key token --json predictions.json
 ```
 
 **With --incremental**
 ```
-$ rabbit names.txt --username username --key token --incremental
+$ rabbit names.txt --username login --key token --incremental
 ```
 
 ## License
