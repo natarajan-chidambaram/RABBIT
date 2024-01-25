@@ -14,8 +14,6 @@ import GenerateActivities as gat
 import ExtractEvent as eev
 import ComputeFeatures as cfe
 
-from urllib3 import urlopen, Request
-
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
