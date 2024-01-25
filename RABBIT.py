@@ -14,6 +14,7 @@ import GenerateActivities as gat
 import ExtractEvent as eev
 import ComputeFeatures as cfe
 
+from urllib3 import urlopen, Request
 
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -129,9 +130,9 @@ def QueryEvents(contributor, username, key, page):
                 events = eev.unpackJson(json_response)
                 list_event.extend(events)
 
-            if int(response.headers['X-RateLimit-Remaining']) < 5:
+            if int(response.headers['X-RateLimit-Remaining']) < 3:
                 pause, ResetTime = time_to_pause(int(response.headers['X-RateLimit-Reset']))
-                print("Limit going to be reached. Querying paused until next reset time: {0}".format(ResetTime))
+                print("Remaining API query limit is {0}. Querying paused until next reset time: {1}".format(response.headers['X-RateLimit-Remaining'], ResetTime))
                 time.sleep(pause)
         else:
             query_failed = True
@@ -223,9 +224,6 @@ def MakePrediction(contributor, username, apikey, min_events, max_queries, time_
             model = get_model()
             probability = model.predict_proba(activity_features)
             prediction, confidence = compute_confidence(probability[0][1])
-            # if(confidence<=min_confidence):
-            #     prediction = 'unknown'
-            #     confidence = '< confidence threshold'
         
         else:
             prediction = 'unknown'
@@ -334,9 +332,6 @@ def arg_parser():
     parser.add_argument(
         '--json', metavar='FILE_NAME.json', required=False, type=str, default='',
         help='Saves the result in json format.')
-    # parser.add_argument(
-    #     '--min-confidence', metavar='MIN_CONFIDENCE', required=False, type=float, default=0.0, 
-    #     help='Minimum confidence required to report the prediction for an account. The default minimum confidence is 0.0.')
     parser.add_argument(
         '--incremental', action="store_true", required=False, default=False, 
         help='Method of reporting the results - incremental/all at once. The default value is False.')
@@ -401,7 +396,6 @@ provided to the tool. Please read more about it in the respository readme file.'
                 output_type,
                 save_path,  
                 args.verbose,
-                # args.min_confidence,
                 args.incremental)
 
 if __name__ == '__main__':
