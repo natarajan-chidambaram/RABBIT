@@ -96,10 +96,9 @@ def format_result(result, verbose):
     
     return(result)
 
-def QueryEvents(contributor, username, key, page):
+def QueryEvents(contributor, key, page):
     '''
     args: contributor (str) - contributor name
-          username (str) - name of the account to which the GitHub API key is associated with
           key (str) - the API key
           page (str) - the events page number to be queried
     
@@ -109,16 +108,17 @@ def QueryEvents(contributor, username, key, page):
     '''
 
     QUERY_ROOT = "https://api.github.com"
-    ACCOUNT = username
-    TOKEN = key
+    # TOKEN = key
     query_failed = False
     list_event = []
 
     try:
         query = f'{QUERY_ROOT}/users/{contributor}/events?per_page=100&page={page}'
-        query_session = requests.Session()
-        query_session.auth = (ACCOUNT, TOKEN)
-        response = query_session.get(query)
+        # query_session = requests.Session()
+        # query_session.auth = (ACCOUNT, TOKEN)
+        # response = query_session.get(query)
+        headers = {'Authorization': 'token ' + key}
+        response = requests.get(query, headers=headers)
 
         if response.ok:
             json_response = response.json()
@@ -146,10 +146,9 @@ def QueryEvents(contributor, username, key, page):
     
     return(list_event, query_failed)
 
-def MakePrediction(contributor, username, apikey, min_events, max_queries, time_after, verbose):
+def MakePrediction(contributor, apikey, min_events, max_queries, time_after, verbose):
     '''
     args: contributor (str) - name of the contributor for whom the prediciton needs to be made
-          username (str) - name of the account to which the GitHub API key is associated with
           apikey (str) - the API key
           min_events (int) - minimum number of events that a contributor should have performed to consider them for prediciton
           max_queries (int) - maximum number of queries to be made to GitHub Events API
@@ -174,7 +173,7 @@ def MakePrediction(contributor, username, apikey, min_events, max_queries, time_
                     'DCA_gini','NAR_mean']
     result_cols = all_features + ['prediction','confidence']
     while(page <= max_queries):
-        events, query_failed = QueryEvents(contributor, username, apikey, page)
+        events, query_failed = QueryEvents(contributor, apikey, page)
         if(len(events)>0):
             df_events_obt = pd.concat([df_events_obt, pd.DataFrame.from_dict(events, orient = 'columns').assign(page=page)])
             df_events_obt['created_at'] = pd.to_datetime(df_events_obt.created_at, errors='coerce').dt.tz_localize(None)
@@ -243,11 +242,10 @@ def MakePrediction(contributor, username, apikey, min_events, max_queries, time_
         
     return(result)
 
-def get_results(contributors_name_file, contributor_name, username, apikey, min_events, max_queries, time_after, output_type, save_path, verbose, incremental):
+def get_results(contributors_name_file, contributor_name, apikey, min_events, max_queries, time_after, output_type, save_path, verbose, incremental):
     '''
     args: contributors_name_file (str) - path to the csv file containing contributors names for which the predicitons need to be made
           contributor_name (str) - login name of GitHub account for which the type needs to be predicted
-          username (str) - name of the account to which the GitHub API key is associated with
           apikey (str) - the API key
           min_events (int) - minimum number of events that a contributor should have performed to consider them for prediciton
           max_queries (int) - maximum number of queries to be made to GitHub Events API
@@ -272,7 +270,7 @@ def get_results(contributors_name_file, contributor_name, username, apikey, min_
         contributors.extend(pd.read_csv(contributors_name_file, sep=' ', header=None, index_col=0).index.to_list())
     all_results = pd.DataFrame()
     for contributor in tqdm(contributors):
-        prediction_result = MakePrediction(contributor, username, apikey, min_events, max_queries, time_after, verbose)
+        prediction_result = MakePrediction(contributor, apikey, min_events, max_queries, time_after, verbose)
         all_results = pd.concat([all_results, prediction_result])
         if incremental:
             save_results(all_results, output_type, save_path)
@@ -322,9 +320,6 @@ def arg_parser():
         '--key', metavar='APIKEY', required=True, type=str, default='',
         help='GitHub API key to extract events from GitHub Events API')
     parser.add_argument(
-        '--username', metavar='USERNAME', required=True, type=str, default='',
-        help='The account name to which the key belongs to')
-    parser.add_argument(
         '--csv', metavar='FILE_NAME.csv', required=False, type=str, default='',
         help='Saves the result in comma-separated values (csv) format.')
     parser.add_argument(
@@ -359,12 +354,6 @@ Please read more about it in the repository readme file.')
     else:
         apikey = args.key
     
-    if args.username == '':
-        sys.exit('The GitHub account name to which the key belongs to is required. \
-Please read more about it in the repository readme file.')
-    else:
-        username = args.username
-    
     if args.file is None and args.u is None:
         sys.exit('The login name of an acount or a .txt file containing login names for accounts should be \
 provided to the tool. Please read more about it in the respository readme file.')
@@ -386,7 +375,6 @@ provided to the tool. Please read more about it in the respository readme file.'
 
     get_results(args.file,
                 args.u, 
-                username, 
                 apikey, 
                 min_events, 
                 args.max_queries, 
