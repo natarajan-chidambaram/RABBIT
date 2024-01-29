@@ -65,7 +65,7 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'RABBIT=RABBIT:cli',
+            'rabbit=rabbit:cli',
         ]
     },
 
