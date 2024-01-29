@@ -69,6 +69,6 @@ setup(
         ]
     },
 
-    py_modules=['RABBIT'],
+    py_modules=['rabbit'],
     zip_safe=True,
 )
