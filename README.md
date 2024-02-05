@@ -1,23 +1,23 @@
 # RABBIT
 
 Rabbit is an Activity Based Bot Identification Tool.
-This is a machine learning based tool to identify bot accounts based on their recent activities in GitHub.
+This is a machine learning-based tool to identify bot accounts based on their recent activities in GitHub.
 The tool has been developed by Natarajan Chidambaram, researcher at the [Software Engineering Lab](http://informatique.umons.ac.be/genlog/) of the [University of Mons](https://www.umons.ac.be) (Belgium) as part of his PhD research in the context of [DigitalWallonia4.AI research project ARIAC (grant number 2010235)](https://www.digitalwallonia.be/ia/) and [TRAIL](https://trail.ac/en/)
 
-This tool accepts an account name and/or a text file of GitHub account names (one account name per line) and a GitHub API key to give in predictions after the following four steps.
-The first step consists of extracting the public events performed by accounts in GitHub. If the number of events is less than the provided threshold (`--min-events`), then more events will be queried until maximum number of queries (`--max-queries`)is reached. This step results in a set of events. 
+This tool accepts an account name and/or a text file of GitHub account names (one account name per line) and a GitHub API key to give predictions after the following four steps.
+The first step consists of extracting the public events performed by accounts in GitHub. If the number of events is less than the provided threshold (`--min-events`), then more events will be queried until the maximum number of queries (`--max-queries`)is reached. This step results in a set of events. 
 The second step identifies activities (belonging to 24 different activity types) performed by the account in GitHub. 
 The third step constitutes identifying the account behavioural features, namely, mean Number of Activities per activity Type (NAT_mean), Number of activity Types (NT), median time (Delta) between Consecutive Activities of different Types (DCAT_median), Number of Owners of Repositories contributed to (NOR), Gini inequality of Duration of Consecutive Activities (DCA_gini) and mean Number of Activities per Repository (NAR_mean). 
-The forth step simply applies the classification model that we trained on activities performed by 386 bots and 415 humans and evaluated on activities performed by 258 bots and 276 human accounts in GitHub and gives the prediction on the type of account along with the prediction confidence.
+The fourth step simply applies the classification model that we trained on activities performed by 386 bots and 415 humans and evaluated on activities performed by 258 bots and 276 human accounts in GitHub and gives the prediction on the type of account along with the prediction confidence.
 
 **Note about misclassifications** The tool is based on a machine learning classifier that is trained and validated on a ground-truth dataset if the account is bot or human along with their activity sequences, and cannot reach a precision and recall of 100%. 
 When running the tool on a set of GitHub accounts of your choice, it is therefore possible that the tool may produce misclassifications in practice (humans misclassified as bots, or vice versa). 
 If you encounter such situations while running the tool, please inform us about it, so that we can strive to further improve the accuracy of the classification algorithm. A known reason for the presence of misclassifications is the presence of very few activities in GitHub.
-Since we considered the practical limitations of GitHub Events API, and to enable the tool to be used in practice, we trained, validated and tested the classification model by making 3 queries to the GitHub Events API as on 14 November 2023 for all the accounts in our collection. Also, we applied a lower bound condition that a contributor should have performed at least 5 events to predict their type.
+Since we considered the practical limitations of GitHub Events API, and to enable the tool to be used in practice, we trained, validated and tested the classification model by making 3 queries to the GitHub Events API as of 14 November 2023 for all the accounts in our collection. Also, we applied a lower bound condition that a contributor should have performed at least 5 events to predict their type.
 The tool will query the GitHub Events API with 100 events per query until the required user's number of queries (through optional parameters) or until 3 queries have been made per account to the GitHub Events API.
 
 ## Submission
-The tool is part of an empirical research endeavour aiming to identify bots in GitHub based on recent their activities in GitHub repositories. An associated research paper is submitted at the International Conference on Mining Software Repositories 2024 (MSR2024) - Data and Tool Showcase Track under the title "**RABBIT: A tool for identifying bot accounts based on their recent GitHub event history**"
+The tool is part of an empirical research endeavour aiming to identify bots in GitHub based on recent activities in GitHub repositories. An associated research paper is submitted at the International Conference on Mining Software Repositories 2024 (MSR2024) - Data and Tool Showcase Track under the title "**RABBIT: A tool for identifying bot accounts based on their recent GitHub event history**"
 
 ## Installation
 Given that this tool has many dependencies, and in order not to conflict with already installed packages, it is recommended to use a virtual environment before its installation. You can install and create a _Python virtual environment_ and then install and run the tool in this environment. You can use any virtual environment of your choice. Below are the steps to install and create a virtual environment with **virtualenv**.
@@ -158,7 +158,7 @@ $ rabbit names.txt --key token --max-queries 1
 **With --verbose**
 ```
 $ rabbit names.txt --key token --verbose
-                  account      events      activites      NAT_mean      NT      DCAT_median      NOR      DCA_gini      NAR_mean      prediction      confidence
+                  account      events      activities      NAT_mean      NT      DCAT_median      NOR      DCA_gini      NAR_mean      prediction      confidence
        tensorflow-jenkins         160            160          40.0     4.0             2.39      2.0         0.426        53.333             bot           0.993
            johnpbloch-bot         300            300         100.0     3.0            0.001      1.0         0.872         100.0             bot           0.996
     natarajan-chidambaram          74             74          14.8     5.0            0.211      3.0         0.951          24.5           human           0.984
