@@ -227,6 +227,13 @@ def MakePrediction(contributor, apikey, min_events, max_queries, time_after, ver
                                         index=[contributor])
             result = format_result(result, verbose)
             not_app = False
+        
+        elif(query_failed):
+            result = pd.DataFrame([[np.nan]*len(all_features) +['invalid',np.nan]], 
+                                columns=result_cols,
+                                index=[contributor])
+            result = format_result(result, verbose)
+            not_app = False
 
     if(not_app):
         while(page <= max_queries):
