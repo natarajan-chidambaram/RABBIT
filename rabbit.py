@@ -96,6 +96,50 @@ def format_result(result, verbose):
     
     return(result)
 
+def QueryUser(contributor, key):
+    '''
+    args: contributor (str) - contributor name
+          key (str) - the API key
+    
+    returns: contributor_type (str) - type of the contribitor ("Bot" or "User")
+             query_failed (bool) - a boolean value to indicate if the query failed or success
+    '''
+
+    QUERY_ROOT = "https://api.github.com"
+    query_failed = False
+    contributor_type = 'unknown'
+
+    try:
+        query = f'{QUERY_ROOT}/users/{contributor}'
+        headers = {'Authorization': 'token ' + key}
+        response = requests.get(query, headers=headers)
+
+        if response.ok:
+            json_response = response.json()
+            if not json_response:
+                return(contributor_type, query_failed)
+            else:
+                contributor_type = json_response['type']
+            
+            if int(response.headers['X-RateLimit-Remaining']) < 3:
+                    pause, ResetTime = time_to_pause(int(response.headers['X-RateLimit-Reset']))
+                    print("Remaining API query limit is {0}. Querying paused until next reset time: {1}".format(response.headers['X-RateLimit-Remaining'], ResetTime))
+                    time.sleep(pause)
+        else:
+            query_failed = True
+            return(contributor_type, query_failed)
+    except requests.exceptions.Timeout as e:
+        print('Request timeout exceeded, retrying after 60 seconds')
+        time.sleep(60)
+        print('Retrying...')
+    except requests.ConnectionError as e:
+        print("Connection error, retrying after 10 seconds")
+        time.sleep(10)
+        print('Retrying...')
+    
+    return(contributor_type, query_failed)
+
+
 def QueryEvents(contributor, key, page):
     '''
     args: contributor (str) - contributor name
@@ -103,6 +147,7 @@ def QueryEvents(contributor, key, page):
           page (str) - the events page number to be queried
     
     returns: list_events (list) - a list of events that were performed by contributor
+             query_failed (bool) - a boolean value to indicate if the query failed or success
 
     description: Query the GitHub Events API with 100 events per page, unpack the json format to get the requried fields and store it in list format
     '''
@@ -165,6 +210,7 @@ def MakePrediction(contributor, apikey, min_events, max_queries, time_after, ver
     '''
     
     page=1
+    not_app = True
     df_events_obt = pd.DataFrame()
     activities = pd.DataFrame()
     all_features = ['events','activities',
@@ -172,73 +218,84 @@ def MakePrediction(contributor, apikey, min_events, max_queries, time_after, ver
                     'DCAT_median','NOR',
                     'DCA_gini','NAR_mean']
     result_cols = all_features + ['prediction','confidence']
-    while(page <= max_queries):
-        events, query_failed = QueryEvents(contributor, apikey, page)
-        if(len(events)>0):
-            df_events_obt = pd.concat([df_events_obt, pd.DataFrame.from_dict(events, orient = 'columns').assign(page=page)])
-            df_events_obt['created_at'] = pd.to_datetime(df_events_obt.created_at, errors='coerce').dt.tz_localize(None)
-            time_after = pd.to_datetime(time_after, errors='coerce').tz_localize(None)
-            if(df_events_obt['created_at'].min() > time_after):
-                time_limit_reached=True
-            else:
-                time_limit_reached=False
-            df_events_obt = df_events_obt[df_events_obt['created_at']>=time_after].sort_values('created_at')
-            if(len(events) == 100 and time_limit_reached):
-                    page = page + 1
-            else:
-                break
-        elif(query_failed):
-            result = pd.DataFrame([[np.nan]*len(all_features) +['invalid',np.nan]], 
-                                columns=result_cols,
-                                index=[contributor])
+
+    if('[bot]' in contributor):
+        contributor_type, query_failed = QueryUser(contributor, apikey)
+        if(contributor_type == 'Bot'):
+            result = pd.DataFrame([[np.nan]*len(all_features) +['app',1.0]], 
+                                        columns=result_cols,
+                                        index=[contributor])
             result = format_result(result, verbose)
+            not_app = False
+
+    if(not_app):
+        while(page <= max_queries):
+            events, query_failed = QueryEvents(contributor, apikey, page)
+            if(len(events)>0):
+                df_events_obt = pd.concat([df_events_obt, pd.DataFrame.from_dict(events, orient = 'columns').assign(page=page)])
+                df_events_obt['created_at'] = pd.to_datetime(df_events_obt.created_at, errors='coerce').dt.tz_localize(None)
+                time_after = pd.to_datetime(time_after, errors='coerce').tz_localize(None)
+                if(df_events_obt['created_at'].min() > time_after):
+                    time_limit_reached=True
+                else:
+                    time_limit_reached=False
+                df_events_obt = df_events_obt[df_events_obt['created_at']>=time_after].sort_values('created_at')
+                if(len(events) == 100 and time_limit_reached):
+                        page = page + 1
+                else:
+                    break
+            elif(query_failed):
+                result = pd.DataFrame([[np.nan]*len(all_features) +['invalid',np.nan]], 
+                                    columns=result_cols,
+                                    index=[contributor])
+                result = format_result(result, verbose)
+                
+                return(result)
+            else:
+                result = pd.DataFrame([[0,0]+[np.nan]*(len(all_features)-2)+['unknown',np.nan]], 
+                                    columns=result_cols,
+                                    index=[contributor])
+                result = format_result(result, verbose)
+
+                return(result)
+        if(df_events_obt.shape[0]>0):
+            activities = gat.activity_identification(df_events_obt)
+        
+        if(len(activities)>0):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                activity_features = cfe.extract_features(activities)
+            activity_features = pd.DataFrame([activity_features], 
+                                                index=[contributor], 
+                                                columns=['NAT_mean',
+                                                        'NT',
+                                                        'DCAT_median',
+                                                        'NOR',
+                                                        'DCA_gini',
+                                                        'NAR_mean']
+                                            )
+            if(df_events_obt.shape[0]>=min_events):
+                model = get_model()
+                probability = model.predict_proba(activity_features)
+                prediction, confidence = compute_confidence(probability[0][1])
             
+            else:
+                prediction = 'unknown'
+                confidence = np.nan
+
+            result = activity_features.assign(events = df_events_obt.shape[0],
+                                            activities = activities.shape[0],
+                                            prediction = prediction, 
+                                            confidence = confidence
+                                            )
+            result = format_result(result, verbose)
+
             return(result)
         else:
             result = pd.DataFrame([[0,0]+[np.nan]*(len(all_features)-2)+['unknown',np.nan]], 
                                 columns=result_cols,
                                 index=[contributor])
             result = format_result(result, verbose)
-
-            return(result)
-    if(df_events_obt.shape[0]>0):
-        activities = gat.activity_identification(df_events_obt)
-    
-    if(len(activities)>0):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RuntimeWarning)
-            activity_features = cfe.extract_features(activities)
-        activity_features = pd.DataFrame([activity_features], 
-                                            index=[contributor], 
-                                            columns=['NAT_mean',
-                                                    'NT',
-                                                    'DCAT_median',
-                                                    'NOR',
-                                                    'DCA_gini',
-                                                    'NAR_mean']
-                                        )
-        if(df_events_obt.shape[0]>=min_events):
-            model = get_model()
-            probability = model.predict_proba(activity_features)
-            prediction, confidence = compute_confidence(probability[0][1])
-        
-        else:
-            prediction = 'unknown'
-            confidence = np.nan
-
-        result = activity_features.assign(events = df_events_obt.shape[0],
-                                          activities = activities.shape[0],
-                                          prediction = prediction, 
-                                          confidence = confidence
-                                         )
-        result = format_result(result, verbose)
-
-        return(result)
-    else:
-        result = pd.DataFrame([[0,0]+[np.nan]*(len(all_features)-2)+['unknown',np.nan]], 
-                              columns=result_cols,
-                              index=[contributor])
-        result = format_result(result, verbose)
         
     return(result)
 
