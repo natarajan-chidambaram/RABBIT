@@ -103,6 +103,7 @@ $ rabbit --file names.txt --key token
                   account      prediction     confidence
        tensorflow-jenkins             bot          0.978
            johnpbloch-bot             bot          0.996
+      github-actions[bot]             app            1.0
 ```
 
 **With --u**
@@ -118,6 +119,7 @@ $ rabbit --u tensorflow-jenkins --file names.txt --key token
                   account      prediction     confidence
        tensorflow-jenkins             bot          0.978
            johnpbloch-bot             bot          0.996
+      github-actions[bot]             app            1.0
     natarajan-chidambaram           human          0.984 
 ```
 
@@ -127,6 +129,7 @@ $ rabbit names.txt --key token --start-time '2023-09-19 00:00:00'
                   account      prediction     confidence
        tensorflow-jenkins             bot          0.978
            johnpbloch-bot             bot          0.996
+      github-actions[bot]             app            1.0
 ```
 
 **With --min-events**
@@ -135,6 +138,7 @@ $ rabbit names.txt --key token --min-events 10
                   account      prediction      confidence
        tensorflow-jenkins             bot           0.993
            johnpbloch-bot             bot           0.996
+      github-actions[bot]             app             1.0
 ```
 
 **With human contributor**
@@ -143,7 +147,8 @@ $ rabbit names.txt --key token
                   account      prediction      confidence
        tensorflow-jenkins             bot           0.993
            johnpbloch-bot             bot           0.996
-    natarajan-chidambaram           human           0.984   
+      github-actions[bot]             app             1.0
+    natarajan-chidambaram           human           0.984 
 ```
 
 **With --max-queries**
@@ -152,6 +157,7 @@ $ rabbit names.txt --key token --max-queries 1
                   account      prediction      confidence
        tensorflow-jenkins             bot           0.956
            johnpbloch-bot             bot           0.976
+      github-actions[bot]             app            1.0
     natarajan-chidambaram           human           0.984
 ```
 
@@ -159,9 +165,10 @@ $ rabbit names.txt --key token --max-queries 1
 ```
 $ rabbit names.txt --key token --verbose
                   account      events      activities      NAT_mean      NT      DCAT_median      NOR      DCA_gini      NAR_mean      prediction      confidence
-       tensorflow-jenkins         160            160          40.0     4.0             2.39      2.0         0.426        53.333             bot           0.993
-           johnpbloch-bot         300            300         100.0     3.0            0.001      1.0         0.872         100.0             bot           0.996
-    natarajan-chidambaram          74             74          14.8     5.0            0.211      3.0         0.951          24.5           human           0.984
+       tensorflow-jenkins         160            160          40.0      4.0             2.39      2.0         0.426        53.333             bot           0.993
+           johnpbloch-bot         300            300         100.0      3.0            0.001      1.0         0.872         100.0             bot           0.996
+      github-actions[bot]         NaN            NaN           NaN      NaN              NaN      NaN           NaN           NaN             app             1.0
+    natarajan-chidambaram          74             74          14.8      5.0            0.211      3.0         0.951          24.5           human           0.984
 ```
 
 **With --csv or --json**
