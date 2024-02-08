@@ -17,6 +17,10 @@ import ComputeFeatures as cfe
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
+TIMEOUT_WAITING_TIME = 30
+CONNECTION_ERROR_WAITING_TIME = 10
+QUERY_LIMIT_RESET_OVERHEAD_TIME = 120
+
 def time_to_pause(nextResetTime):
     '''    
     args:
@@ -26,12 +30,13 @@ def time_to_pause(nextResetTime):
         timeDiff (float): The time that is remaining for the next reset to happen. This is the time (in seconds) that the script needs to wait/sleep
         ResetTime (datetime.datetime): The time at which the next reset happens
     
-    description: Calculates the time that is required to pause querying in case of limit exceed situation
+    description: Calculates the time for resetting query rate limit + QUERY_LIMIT_RESET_OVERHEAD_TIME that 
+                 is required to pause querying in case of limit exceed situation
     '''
 
     ResetTime = datetime.fromtimestamp(int(nextResetTime)).strftime('%Y-%m-%d %H:%M:%S')
     ResetTime = datetime.strptime(ResetTime, '%Y-%m-%d %H:%M:%S')
-    timeDiff = (ResetTime - datetime.now()).total_seconds() + 120
+    timeDiff = (ResetTime - datetime.now()).total_seconds() + QUERY_LIMIT_RESET_OVERHEAD_TIME
     return timeDiff, ResetTime
 
 def get_model():
@@ -82,7 +87,7 @@ def format_result(result, verbose):
     
     returns: result (DataFrame) - formatted result as per verbose
 
-    description: The result that will be printed or saved will universally be formatted here as per the input value of verbose
+    description: The result that will be printed or saved will universally be formatted here as per the input value of verbose.
     '''
 
     if verbose:
@@ -96,7 +101,47 @@ def format_result(result, verbose):
     
     return(result)
 
-def QueryUser(contributor, key):
+def check_ratelimit(ratelimit, nextResetTime, max_queries):
+    '''
+    args: ratelimit (int) - remaining ratelimit for the provided API key
+          nextResetTime (int) - time at which the API ratelimit will be reset
+          max_queries (int) - maximum number of queries per account
+        
+    returns: None
+
+    description: Get the time at which the API rate limit will be reset, calcualte its difference from 
+                 current time + some time overhead and sleep for that much time.
+    '''
+    if ratelimit < max_queries:
+        pause, ResetTime = time_to_pause(nextResetTime)
+        print("Remaining API query limit is {0}. Querying paused until next reset time: {1}".format(ratelimit, ResetTime))
+        time.sleep(pause)
+
+def timeout_exception():
+    '''
+    args: None
+
+    returns: None
+
+    description: Wait for TIMEOUT_WAITING_TIME for trying to query again
+    '''
+    print('Request timeout exceeded, retrying after 60 seconds')
+    time.sleep(TIMEOUT_WAITING_TIME)
+    print('Retrying...')
+
+def connection_error_exception():
+    '''
+    args: None
+
+    returns: None
+
+    description: Wait for CONNECTION_ERROR_WAITING_TIME for trying to query again
+    '''
+    print("Connection error, retrying after 10 seconds")
+    time.sleep(CONNECTION_ERROR_WAITING_TIME)
+    print('Retrying...')
+
+def QueryUser(contributor, key, max_queries):
     '''
     args: contributor (str) - contributor name
           key (str) - the API key
@@ -121,26 +166,20 @@ def QueryUser(contributor, key):
             else:
                 contributor_type = json_response['type']
             
-            if int(response.headers['X-RateLimit-Remaining']) < 3:
-                    pause, ResetTime = time_to_pause(int(response.headers['X-RateLimit-Reset']))
-                    print("Remaining API query limit is {0}. Querying paused until next reset time: {1}".format(response.headers['X-RateLimit-Remaining'], ResetTime))
-                    time.sleep(pause)
+            check_ratelimit(int(response.headers['X-RateLimit-Remaining']), int(response.headers['X-RateLimit-Reset']), max_queries)
+        
         else:
             query_failed = True
             return(contributor_type, query_failed)
     except requests.exceptions.Timeout as e:
-        print('Request timeout exceeded, retrying after 60 seconds')
-        time.sleep(60)
-        print('Retrying...')
+        timeout_exception()
     except requests.ConnectionError as e:
-        print("Connection error, retrying after 10 seconds")
-        time.sleep(10)
-        print('Retrying...')
+        connection_error_exception()
     
     return(contributor_type, query_failed)
 
 
-def QueryEvents(contributor, key, page):
+def QueryEvents(contributor, key, page, max_queries):
     '''
     args: contributor (str) - contributor name
           key (str) - the API key
@@ -153,15 +192,11 @@ def QueryEvents(contributor, key, page):
     '''
 
     QUERY_ROOT = "https://api.github.com"
-    # TOKEN = key
     query_failed = False
     list_event = []
 
     try:
         query = f'{QUERY_ROOT}/users/{contributor}/events?per_page=100&page={page}'
-        # query_session = requests.Session()
-        # query_session.auth = (ACCOUNT, TOKEN)
-        # response = query_session.get(query)
         headers = {'Authorization': 'token ' + key}
         response = requests.get(query, headers=headers)
 
@@ -172,22 +207,16 @@ def QueryEvents(contributor, key, page):
             else:
                 events = eev.unpackJson(json_response)
                 list_event.extend(events)
+            
+            check_ratelimit(int(response.headers['X-RateLimit-Remaining']), int(response.headers['X-RateLimit-Reset']), max_queries)
 
-            if int(response.headers['X-RateLimit-Remaining']) < 3:
-                pause, ResetTime = time_to_pause(int(response.headers['X-RateLimit-Reset']))
-                print("Remaining API query limit is {0}. Querying paused until next reset time: {1}".format(response.headers['X-RateLimit-Remaining'], ResetTime))
-                time.sleep(pause)
         else:
             query_failed = True
             return(list_event, query_failed)
     except requests.exceptions.Timeout as e:
-        print('Request timeout exceeded, retrying after 60 seconds')
-        time.sleep(60)
-        print('Retrying...')
+        timeout_exception()
     except requests.ConnectionError as e:
-        print("Connection error, retrying after 10 seconds")
-        time.sleep(10)
-        print('Retrying...')
+        connection_error_exception()
     
     return(list_event, query_failed)
 
@@ -220,7 +249,7 @@ def MakePrediction(contributor, apikey, min_events, max_queries, time_after, ver
     result_cols = all_features + ['prediction','confidence']
 
     if('[bot]' in contributor):
-        contributor_type, query_failed = QueryUser(contributor, apikey)
+        contributor_type, query_failed = QueryUser(contributor, apikey, max_queries)
         if(contributor_type == 'Bot'):
             result = pd.DataFrame([[np.nan]*len(all_features) +['app',1.0]], 
                                         columns=result_cols,
@@ -237,16 +266,18 @@ def MakePrediction(contributor, apikey, min_events, max_queries, time_after, ver
 
     if(not_app):
         while(page <= max_queries):
-            events, query_failed = QueryEvents(contributor, apikey, page)
+            events, query_failed = QueryEvents(contributor, apikey, page, max_queries)
             if(len(events)>0):
                 df_events_obt = pd.concat([df_events_obt, pd.DataFrame.from_dict(events, orient = 'columns').assign(page=page)])
-                df_events_obt['created_at'] = pd.to_datetime(df_events_obt.created_at, errors='coerce').dt.tz_localize(None)
-                time_after = pd.to_datetime(time_after, errors='coerce').tz_localize(None)
+                df_events_obt['created_at'] = pd.to_datetime(df_events_obt.created_at, errors='coerce', format='%Y-%m-%dT%H:%M:%SZ').dt.tz_localize(None)
+                time_after = pd.to_datetime(time_after, errors='coerce', format='%Y-%m-%d %H:%M:%S').tz_localize(None)
+                
                 if(df_events_obt['created_at'].min() > time_after):
                     time_limit_reached=True
                 else:
                     time_limit_reached=False
                 df_events_obt = df_events_obt[df_events_obt['created_at']>=time_after].sort_values('created_at')
+                df_events_obt = df_events_obt.sort_values('created_at')
                 if(len(events) == 100 and time_limit_reached):
                         page = page + 1
                 else:
@@ -269,9 +300,9 @@ def MakePrediction(contributor, apikey, min_events, max_queries, time_after, ver
             activities = gat.activity_identification(df_events_obt)
         
         if(len(activities)>0):
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", category=RuntimeWarning)
-                activity_features = cfe.extract_features(activities)
+            # with warnings.catch_warnings():
+            #     warnings.simplefilter("ignore", category=RuntimeWarning)
+            activity_features = cfe.extract_features(activities)
             activity_features = pd.DataFrame([activity_features], 
                                                 index=[contributor], 
                                                 columns=['NAT_mean',
@@ -418,7 +449,7 @@ Please read more about it in the repository readme file.')
     else:
         apikey = args.key
     
-    if args.file is None and len(args.account == 0):
+    if args.file is None and len(args.account) == 0:
         sys.exit('The login name of an acount or a .txt file containing login names for accounts should be \
 provided to the tool. Please read more about it in the respository readme file.')
     
