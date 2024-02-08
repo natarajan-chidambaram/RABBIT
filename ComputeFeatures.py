@@ -35,8 +35,7 @@ def extract_features(df):
                  5) Gini coefficient of time between consecuvtive activities
                  6) Mean number of activities per repository
     '''
-    
-    df['date'] = pd.to_datetime(df.date, errors='coerce').dt.tz_localize(None)
+    df['date'] = pd.to_datetime(df.date, errors='coerce', format='%Y-%m-%dT%H:%M:%S+00:00').dt.tz_localize(None)
     df[['owner','repo']]=df.repository.str.split('/', expand=True)
     #1
     mean_num_activities_per_type = (

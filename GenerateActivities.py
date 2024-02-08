@@ -1387,8 +1387,8 @@ def activity_identification(df_events):
     if(df_events.columns.isin(['issue_number']).any()):
         df_events = df_events.astype({'issue_number':'Int64'})
     if(df_events.columns.isin(['issue_closed_at']).any()):
-        df_events['issue_closed_at'] = pd.to_datetime(df_events.issue_closed_at, errors='coerce').dt.tz_localize(None)
-    df_events['created_at'] = pd.to_datetime(df_events.created_at, errors='coerce').dt.tz_localize(None)
+        df_events['issue_closed_at'] = pd.to_datetime(df_events.issue_closed_at, errors='coerce', format='%Y-%m-%dT%H:%M:%SZ').dt.tz_localize(None)
+    df_events['created_at'] = pd.to_datetime(df_events.created_at, errors='coerce', format='%Y-%m-%dT%H:%M:%SZ').dt.tz_localize(None)
     
     df_events = df_events.astype({'event_id':'Int64'})
     df_events = df_events.sort_values('created_at')
