@@ -328,8 +328,8 @@ def get_results(contributors_name_file, contributor_name, apikey, min_events, ma
     '''
 
     contributors = []
-    if contributor_name is not None:
-        contributors.extend([contributor_name])
+    if len(contributor_name) > 0:
+        contributors.extend(contributor_name)
     if contributors_name_file is not None:
         contributors.extend(pd.read_csv(contributors_name_file, sep=' ', header=None, index_col=0).index.to_list())
     all_results = pd.DataFrame()
@@ -363,10 +363,10 @@ def save_results(all_results, output_type, save_path):
 
 def arg_parser():
     parser = argparse.ArgumentParser(description='RABBIT is an Activity Based Bot Identification Tool that identifies bots based on their recent activities in GitHub')
+    parser.add_argument('account', action='store', type=str, default=None, nargs='*', 
+                        help='For predicting type of single account, the login name of the account should be provided to the tool.')
     parser.add_argument('--file', type=str, default=None, required=False,
                         help='For predicting type of multiple accounts, a .txt file with the login names (one name per line) of the accounts should be provided to the tool.')
-    parser.add_argument('--u', type=str, default=None, required=False,
-                        help='For predicting type of single account, the login name of the account should be provided to the tool.')
     parser.add_argument(
         '--start-time', type=str, required=False,
         default=None, help='Start time (format: yyyy-mm-dd HH:MM:SS) to be considered for anlysing the account\'s activity. \
@@ -418,7 +418,7 @@ Please read more about it in the repository readme file.')
     else:
         apikey = args.key
     
-    if args.file is None and args.u is None:
+    if args.file is None and len(args.account == 0):
         sys.exit('The login name of an acount or a .txt file containing login names for accounts should be \
 provided to the tool. Please read more about it in the respository readme file.')
     
@@ -438,7 +438,7 @@ provided to the tool. Please read more about it in the respository readme file.'
         save_path = ''
 
     get_results(args.file,
-                args.u, 
+                args.account,
                 apikey, 
                 min_events, 
                 args.max_queries, 
