@@ -365,7 +365,7 @@ def arg_parser():
     parser = argparse.ArgumentParser(description='RABBIT is an Activity Based Bot Identification Tool that identifies bots based on their recent activities in GitHub')
     parser.add_argument('account', action='store', type=str, default=None, nargs='*', 
                         help='For predicting type of single account, the login name of the account should be provided to the tool.')
-    parser.add_argument('--file', '-f', type=str, default=None, required=False,
+    parser.add_argument('--file', type=str, default=None, required=False,
                         help='For predicting type of multiple accounts, a .txt file with the login names (one name per line) of the accounts should be provided to the tool.')
     parser.add_argument(
         '--start-time', type=str, required=False,
