@@ -51,14 +51,14 @@ pip install git+https://github.com/natarajan-chidambaram/RABBIT
 To execute **RABBIT**, you need to provide a *GitHub personal access token* (API key). You can follow the instructions [here](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token) to obtain such a token.
 
 You can execute the tool with all default parameters by running `rabbit <LOGIN_NAME> --key <APIKEY>` 
-or `rabbit --file <path/to/loginnames.txt> --key <APIKEY>`  
+or `rabbit --file <path/to/loginnames.txt> --key <APIKEY>` or `rabbit -f <path/to/loginnames.txt> --key <APIKEY>`
 
 Here is the list of parameters:
 
 `<LOGIN_NAME>`            **A positional argument (not mandatory) for predicting type of single account, the login name of the account should be provided.**
 > Example: $ rabbit natarajan-chidambaram --key token 
 
-`--file <path/to/loginnames.txt>`            **For predicting the type of multiple accounts, a .txt file with the login names (one name per line) of the accounts should be provided as input.**
+`--file/-f <path/to/loginnames.txt>`            **For predicting the type of multiple accounts, a .txt file with the login names (one name per line) of the accounts should be provided as input.**
 > Example: $ rabbit --file logins.txt --key token
 
 _Either the positional argument `<LOGIN_NAME>` or `--file` is mandatory. In case both are given, then the accounts given with `--file` will be processed after the account given in the positional argument has been processed._
