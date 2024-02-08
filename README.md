@@ -71,7 +71,7 @@ _This parameter is mandatory and you can obtain an access token as described ear
 `--start-time <START_TIME>` 		**Start time to be considered for analysing the account's activity.**
 > Example: $ rabbit --file logins.txt --key token --start-time '2023-01-01 00:00:00'
 
-_The default start-time is 90 days before the current time._
+_The default start-time is 90 days before the current time. Only the last 300 events that were performed after the start-time will be considered for analysis due to GitHub's API limitation_
 
 `--min-events <MIN_EVENTS>` 		**Minimum number of events that are required to make a prediction.**
 > Example: $ rabbit --file logins.txt --key token --min-events 10
