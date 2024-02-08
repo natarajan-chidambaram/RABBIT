@@ -50,18 +50,18 @@ pip install git+https://github.com/natarajan-chidambaram/RABBIT
 ## Usage
 To execute **RABBIT**, you need to provide a *GitHub personal access token* (API key). You can follow the instructions [here](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token) to obtain such a token.
 
-You can execute the tool with all default parameters by running `rabbit --file <path/to/loginnames.txt> --key <APIKEY>`
-or  `rabbit --u <LOGIN_NAME> --key <APIKEY>`
+You can execute the tool with all default parameters by running `rabbit <LOGIN_NAME> --key <APIKEY>` 
+or `rabbit --file <path/to/loginnames.txt> --key <APIKEY>`  
 
 Here is the list of parameters:
+
+`<LOGIN_NAME>`            **A positional argument (not mandatory) for predicting type of single account, the login name of the account should be provided.**
+> Example: $ rabbit natarajan-chidambaram --key token 
 
 `--file <path/to/loginnames.txt>`            **For predicting the type of multiple accounts, a .txt file with the login names (one name per line) of the accounts should be provided as input.**
 > Example: $ rabbit --file logins.txt --key token
 
-`--u <LOGIN_NAME>`            **For predicting type of single account, the login name of the account should be provided.**
-> Example: $ rabbit --u natarajan-chidambaram --key token 
-
-_Either of the above inputs `--file` or `--u` is mandatory. In case both are given, then the accounts given with `--file` will be processed after the account given in `--u` has been processed._
+_Either the positional argument `<LOGIN_NAME>` or `--file` is mandatory. In case both are given, then the accounts given with `--file` will be processed after the account given in the positional argument has been processed._
 
 `--key <APIKEY>` 			**GitHub personal access token (key) required to extract events from the GitHub Events API.**
 > Example: $ rabbit --file logins.txt --key token
@@ -101,6 +101,13 @@ _If provided, the result will be printed on the screen or saved to the file once
 
 ## Examples of RABBIT output (for illustration purposes only)
 
+**With positional argument**
+```
+$ rabbit tensorflow-jenkins --key token
+                  account      prediction     confidence
+       tensorflow-jenkins             bot          0.978
+```
+
 **With --file**
 ```
 $ rabbit --file logins.txt --key token
@@ -110,16 +117,9 @@ $ rabbit --file logins.txt --key token
       github-actions[bot]             app            1.0
 ```
 
-**With --u**
+**With combined use of positional argument and --file**
 ```
-$ rabbit --u tensorflow-jenkins --key token
-                  account      prediction     confidence
-       tensorflow-jenkins             bot          0.978
-```
-
-**With combined use of --file and --u**
-```
-$ rabbit --u tensorflow-jenkins --file logins.txt --key token
+$ rabbit tensorflow-jenkins --file logins.txt --key token
                   account      prediction     confidence
        tensorflow-jenkins             bot          0.978
            johnpbloch-bot             bot          0.996
