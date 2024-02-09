@@ -220,13 +220,12 @@ def QueryEvents(contributor, key, page, max_queries):
     
     return(list_event, query_failed)
 
-def MakePrediction(contributor, apikey, min_events, max_queries, time_after, verbose):
+def MakePrediction(contributor, apikey, min_events, max_queries, verbose):
     '''
     args: contributor (str) - name of the contributor for whom the prediciton needs to be made
           apikey (str) - the API key
           min_events (int) - minimum number of events that a contributor should have performed to consider them for prediciton
           max_queries (int) - maximum number of queries to be made to GitHub Events API
-          time_after (datetime) - Events that are made after this time_after are considered
           verbose (bool) - If True, displays the features, #events and #activities that were used to make the prediction
     
     returns: activity_features (array) - an array of 7 features and the probability that the contributor is a bot
@@ -270,15 +269,16 @@ def MakePrediction(contributor, apikey, min_events, max_queries, time_after, ver
             if(len(events)>0):
                 df_events_obt = pd.concat([df_events_obt, pd.DataFrame.from_dict(events, orient = 'columns').assign(page=page)])
                 df_events_obt['created_at'] = pd.to_datetime(df_events_obt.created_at, errors='coerce', format='%Y-%m-%dT%H:%M:%SZ').dt.tz_localize(None)
-                time_after = pd.to_datetime(time_after, errors='coerce', format='%Y-%m-%d %H:%M:%S').tz_localize(None)
+                # time_after = pd.to_datetime(time_after, errors='coerce', format='%Y-%m-%d %H:%M:%S').tz_localize(None)
                 
-                if(df_events_obt['created_at'].min() > time_after):
-                    time_limit_reached=True
-                else:
-                    time_limit_reached=False
-                df_events_obt = df_events_obt[df_events_obt['created_at']>=time_after].sort_values('created_at')
+                # if(df_events_obt['created_at'].min() > time_after):
+                #     time_limit_reached=True
+                # else:
+                #     time_limit_reached=False
+                # df_events_obt = df_events_obt[df_events_obt['created_at']>=time_after].sort_values('created_at')
                 df_events_obt = df_events_obt.sort_values('created_at')
-                if(len(events) == 100 and time_limit_reached):
+                # if(len(events) == 100 and time_limit_reached):
+                if(len(events) == 100):
                         page = page + 1
                 else:
                     break
@@ -337,14 +337,13 @@ def MakePrediction(contributor, apikey, min_events, max_queries, time_after, ver
         
     return(result)
 
-def get_results(contributors_name_file, contributor_name, apikey, min_events, max_queries, time_after, output_type, save_path, verbose, incremental):
+def get_results(contributors_name_file, contributor_name, apikey, min_events, max_queries, output_type, save_path, verbose, incremental):
     '''
     args: contributors_name_file (str) - path to the csv file containing contributors names for which the predicitons need to be made
           contributor_name (str) - login name of GitHub account for which the type needs to be predicted
           apikey (str) - the API key
           min_events (int) - minimum number of events that a contributor should have performed to consider them for prediciton
           max_queries (int) - maximum number of queries to be made to GitHub Events API
-          time_after (datetime) - events that are made after this time_after are considered
           verbose (bool) - if True, displays the features that were used to make the prediction
           result (DataFrame) - DataFrame of prediction results
           save_path (str) - the path along with file name and extension to save the prediction results
@@ -365,7 +364,7 @@ def get_results(contributors_name_file, contributor_name, apikey, min_events, ma
         contributors.extend(pd.read_csv(contributors_name_file, sep=' ', header=None, index_col=0).index.to_list())
     all_results = pd.DataFrame()
     for contributor in tqdm(contributors):
-        prediction_result = MakePrediction(contributor, apikey, min_events, max_queries, time_after, verbose)
+        prediction_result = MakePrediction(contributor, apikey, min_events, max_queries, verbose)
         all_results = pd.concat([all_results, prediction_result])
         if incremental:
             save_results(all_results, output_type, save_path)
@@ -398,10 +397,10 @@ def arg_parser():
                         help='For predicting type of single account, the login name of the account should be provided to the tool.')
     parser.add_argument('--file', type=str, default=None, required=False,
                         help='For predicting type of multiple accounts, a .txt file with the login names (one name per line) of the accounts should be provided to the tool.')
-    parser.add_argument(
-        '--start-time', type=str, required=False,
-        default=None, help='Start time (format: yyyy-mm-dd HH:MM:SS) to be considered for anlysing the account\'s activity. \
-                            The default start-time is 91 days before the current time.')
+    # parser.add_argument(
+    #     '--start-time', type=str, required=False,
+    #     default=None, help='Start time (format: yyyy-mm-dd HH:MM:SS) to be considered for anlysing the account\'s activity. \
+    #                         The default start-time is 91 days before the current time.')
     parser.add_argument(
         '--verbose', action="store_true", required=False, default=False,
         help='Also report the values of the number of events, number of identified activities and features that were used to make the prediction. The default value is False.')
@@ -438,10 +437,10 @@ def cli():
 
     args = arg_parser()
 
-    if args.start_time is not None:
-        time_after = datetime.strftime(dateutil.parser.parse(args.start_time), '%Y-%m-%d %H:%M:%S')
-    else:
-        time_after = datetime.strftime(datetime.now()+relativedelta(days=-91), '%Y-%m-%d %H:%M:%S')
+    # if args.start_time is not None:
+    #     time_after = datetime.strftime(dateutil.parser.parse(args.start_time), '%Y-%m-%d %H:%M:%S')
+    # else:
+    #     time_after = datetime.strftime(datetime.now()+relativedelta(days=-91), '%Y-%m-%d %H:%M:%S')
 
     if args.key == '' or len(args.key) < 40:
         sys.exit('A valid GitHub personal access token is required to start the process. \
@@ -473,7 +472,7 @@ provided to the tool. Please read more about it in the respository readme file.'
                 apikey, 
                 min_events, 
                 args.max_queries, 
-                time_after, 
+                # time_after, 
                 output_type,
                 save_path,  
                 args.verbose,
