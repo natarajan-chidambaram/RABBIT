@@ -300,9 +300,9 @@ def MakePrediction(contributor, apikey, min_events, max_queries, time_after, ver
             activities = gat.activity_identification(df_events_obt)
         
         if(len(activities)>0):
-            # with warnings.catch_warnings():
-            #     warnings.simplefilter("ignore", category=RuntimeWarning)
-            activity_features = cfe.extract_features(activities)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                activity_features = cfe.extract_features(activities)
             activity_features = pd.DataFrame([activity_features], 
                                                 index=[contributor], 
                                                 columns=['NAT_mean',
