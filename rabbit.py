@@ -339,7 +339,7 @@ def MakePrediction(contributor, apikey, min_events, max_queries, verbose):
 
 def get_results(contributors_name_file, contributor_name, apikey, min_events, max_queries, output_type, save_path, verbose, incremental):
     '''
-    args: contributors_name_file (str) - path to the csv file containing contributors names for which the predicitons need to be made
+    args: contributors_name_file (str) - path to the text file containing contributors names for which the predicitons need to be made
           contributor_name (str) - login name of GitHub account for which the type needs to be predicted
           apikey (str) - the API key
           min_events (int) - minimum number of events that a contributor should have performed to consider them for prediciton
@@ -395,7 +395,7 @@ def arg_parser():
     parser = argparse.ArgumentParser(description='RABBIT is an Activity Based Bot Identification Tool that identifies bots based on their recent activities in GitHub')
     parser.add_argument('account', action='store', type=str, default=None, nargs='*', 
                         help='For predicting type of single account, the login name of the account should be provided to the tool.')
-    parser.add_argument('--file', type=str, default=None, required=False,
+    parser.add_argument('--input-file', type=str, default=None, required=False,
                         help='For predicting type of multiple accounts, a .txt file with the login names (one name per line) of the accounts should be provided to the tool.')
     # parser.add_argument(
     #     '--start-time', type=str, required=False,
@@ -448,7 +448,7 @@ Please read more about it in the repository readme file.')
     else:
         apikey = args.key
     
-    if args.file is None and len(args.account) == 0:
+    if args.input_file is None and len(args.account) == 0:
         sys.exit('The login name of an acount or a .txt file containing login names for accounts should be \
 provided to the tool. Please read more about it in the respository readme file.')
     
@@ -467,7 +467,7 @@ provided to the tool. Please read more about it in the respository readme file.'
         output_type = 'text'
         save_path = ''
 
-    get_results(args.file,
+    get_results(args.input_file,
                 args.account,
                 apikey, 
                 min_events, 
