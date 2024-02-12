@@ -289,13 +289,15 @@ def MakePrediction(contributor, apikey, min_events, max_queries, verbose):
                 result = format_result(result, verbose)
                 
                 return(result)
-            else:
+            elif(page==1):
                 result = pd.DataFrame([[0,0]+[np.nan]*(len(all_features)-2)+['unknown',np.nan]], 
                                     columns=result_cols,
                                     index=[contributor])
                 result = format_result(result, verbose)
 
                 return(result)
+            else:
+                break
         if(df_events_obt.shape[0]>0):
             activities = gat.activity_identification(df_events_obt)
         
