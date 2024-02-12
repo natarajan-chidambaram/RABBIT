@@ -50,18 +50,17 @@ pip install git+https://github.com/natarajan-chidambaram/RABBIT
 ## Usage
 To execute **RABBIT**, you need to provide a *GitHub personal access token* (API key). You can follow the instructions [here](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token) to obtain such a token.
 
-You can execute the tool with all default parameters by running `rabbit <LOGIN_NAME> --key <APIKEY>` 
-or `rabbit --input-file <path/to/loginnames.txt> --key <APIKEY>` or `rabbit -f <path/to/loginnames.txt> --key <APIKEY>`
+You can execute the tool with all default parameters by running `rabbit <LOGIN_NAME> --key <APIKEY>`. 
 
 Here is the list of parameters:
 
-`<LOGIN_NAME>`            **A positional argument (not mandatory) for predicting type of single account, the login name of the account should be provided.**
-> Example: $ rabbit natarajan-chidambaram --key token 
+`<LOGIN_NAME>`            **Any number of positional arguments specifying the login names of the accounts that need to be predicted.**
+> Example: $ rabbit natarajan-chidambaram tommens --key token 
 
-`--input-file <path/to/loginnames.txt>`            **For predicting the type of multiple accounts, a .txt file with the login names (one name per line) of the accounts should be provided as input.**
+`--input-file <path/to/loginnames.txt>`            **A text input file with the login names (one name per line) of the accounts that need to  be predicted.**
 > Example: $ rabbit --input-file logins.txt --key token
 
-_Either the positional argument `<LOGIN_NAME>` or `--input-file` is mandatory. In case both are given, then the accounts given with `--input-file` will be processed after the account given in the positional argument has been processed._
+_Either the positional argument `<LOGIN_NAME>` or `--input-file` is mandatory. In case both are given, then the accounts given with `--input-file` will be processed after the accounts given as positional arguments have been processed._
 
 `--key <APIKEY>` 			**GitHub personal access token (key) required to extract events from the GitHub Events API.**
 > Example: $ rabbit --input-file logins.txt --key token
@@ -83,23 +82,23 @@ _The default number of queries is 3, allowed values are 1, 2 or 3._
 
 _The default value is False._
 
-`--csv <FILE_NAME.csv>`                		Saves the result in comma-separated values (csv) format
-`--json <FILE_NAME.json>`                	Outputs the result in json format
+`--json <FILE_NAME.json>`                	**Outputs the result in json format.**
 > Example: $ rabbit --input-file logins.txt --key token --json output.json
 
-`--incremental`              		**Method of reporting the results**
+`--csv <FILE_NAME.csv>`                		**Saves the result in comma-separated values (csv) format.**
+
+`--incremental`              		**Method of reporting the results.** _If provided, the result for an account will be reported as soon as its prediction is made. If not provided, the results will be reported after all accounts have been predicted._
 > Example: $ rabbit --input-file logins.txt --key token --incremental
 
 _The default value is False._
 
-_If provided, the result will be printed on the screen or saved to the file once the prediction is made for each account. If not provided, the results will be printed/stored after making prediction for all the accounts in the provided list._
-
 ## Examples of RABBIT output (for illustration purposes only)
 
-**With positional argument**
+**With positional arguments**
 ```
-$ rabbit tensorflow-jenkins --key token
+$ rabbit natarajan-chidambaram tensorflow-jenkins --key token
                   account      prediction     confidence
+    natarajan-chidambaram           human          0.984 
        tensorflow-jenkins             bot          0.978
 ```
 
@@ -112,20 +111,11 @@ $ rabbit --input-file logins.txt --key token
       github-actions[bot]             app            1.0
 ```
 
-**With combined use of positional argument and --input-file**
+**With combined use of positional arguments and --input-file**
 ```
-$ rabbit tensorflow-jenkins --input-file logins.txt --key token
+$ rabbit natarajan-chidambaram --input-file logins.txt --key token
                   account      prediction     confidence
-       tensorflow-jenkins             bot          0.978
-           johnpbloch-bot             bot          0.996
-      github-actions[bot]             app            1.0
     natarajan-chidambaram           human          0.984 
-```
-
-**With --start-time**
-```
-$ rabbit --input-file logins.txt --key token --start-time '2023-09-19 00:00:00'
-                  account      prediction     confidence
        tensorflow-jenkins             bot          0.978
            johnpbloch-bot             bot          0.996
       github-actions[bot]             app            1.0
@@ -138,16 +128,6 @@ $ rabbit --input-file logins.txt --key token --min-events 10
        tensorflow-jenkins             bot           0.993
            johnpbloch-bot             bot           0.996
       github-actions[bot]             app             1.0
-```
-
-**With human contributor**
-```
-$ rabbit --input-file logins.txt --key token
-                  account      prediction      confidence
-       tensorflow-jenkins             bot           0.993
-           johnpbloch-bot             bot           0.996
-      github-actions[bot]             app             1.0
-    natarajan-chidambaram           human           0.984 
 ```
 
 **With --max-queries**
