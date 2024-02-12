@@ -51,49 +51,44 @@ pip install git+https://github.com/natarajan-chidambaram/RABBIT
 To execute **RABBIT**, you need to provide a *GitHub personal access token* (API key). You can follow the instructions [here](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token) to obtain such a token.
 
 You can execute the tool with all default parameters by running `rabbit <LOGIN_NAME> --key <APIKEY>` 
-or `rabbit --file <path/to/loginnames.txt> --key <APIKEY>` or `rabbit -f <path/to/loginnames.txt> --key <APIKEY>`
+or `rabbit --input-file <path/to/loginnames.txt> --key <APIKEY>` or `rabbit -f <path/to/loginnames.txt> --key <APIKEY>`
 
 Here is the list of parameters:
 
 `<LOGIN_NAME>`            **A positional argument (not mandatory) for predicting type of single account, the login name of the account should be provided.**
 > Example: $ rabbit natarajan-chidambaram --key token 
 
-`--file/-f <path/to/loginnames.txt>`            **For predicting the type of multiple accounts, a .txt file with the login names (one name per line) of the accounts should be provided as input.**
-> Example: $ rabbit --file logins.txt --key token
+`--input-file <path/to/loginnames.txt>`            **For predicting the type of multiple accounts, a .txt file with the login names (one name per line) of the accounts should be provided as input.**
+> Example: $ rabbit --input-file logins.txt --key token
 
-_Either the positional argument `<LOGIN_NAME>` or `--file` is mandatory. In case both are given, then the accounts given with `--file` will be processed after the account given in the positional argument has been processed._
+_Either the positional argument `<LOGIN_NAME>` or `--input-file` is mandatory. In case both are given, then the accounts given with `--input-file` will be processed after the account given in the positional argument has been processed._
 
 `--key <APIKEY>` 			**GitHub personal access token (key) required to extract events from the GitHub Events API.**
-> Example: $ rabbit --file logins.txt --key token
+> Example: $ rabbit --input-file logins.txt --key token
 
 _This parameter is mandatory and you can obtain an access token as described earlier_
 
-`--start-time <START_TIME>` 		**Start time to be considered for analysing the account's activity.**
-> Example: $ rabbit --file logins.txt --key token --start-time '2023-01-01 00:00:00'
-
-_The default start-time is 90 days before the current time. Only the last 300 events that were performed after the start-time will be considered for analysis due to GitHub's API limitation_
-
 `--min-events <MIN_EVENTS>` 		**Minimum number of events that are required to make a prediction.**
-> Example: $ rabbit --file logins.txt --key token --min-events 10
+> Example: $ rabbit --input-file logins.txt --key token --min-events 10
 
 _The default minimum number of events is 5._
 
 `--max-queries <NUM_QUERIES>` 		**Maximum number of queries that will be made to the GitHub Events API for each account.**
-> Example: $ rabbit --file logins.txt --key token --queries 2
+> Example: $ rabbit --input-file logins.txt --key token --queries 2
 
 _The default number of queries is 3, allowed values are 1, 2 or 3._
 
 `--verbose`              		**Report the #events, #activities and values of the features that were used to make a prediction.**
-> Example: $ rabbit --file logins.txt --key token --verbose
+> Example: $ rabbit --input-file logins.txt --key token --verbose
 
 _The default value is False._
 
 `--csv <FILE_NAME.csv>`                		Saves the result in comma-separated values (csv) format
 `--json <FILE_NAME.json>`                	Outputs the result in json format
-> Example: $ rabbit --file logins.txt --key token --json output.json
+> Example: $ rabbit --input-file logins.txt --key token --json output.json
 
 `--incremental`              		**Method of reporting the results**
-> Example: $ rabbit --file logins.txt --key token --incremental
+> Example: $ rabbit --input-file logins.txt --key token --incremental
 
 _The default value is False._
 
@@ -108,18 +103,18 @@ $ rabbit tensorflow-jenkins --key token
        tensorflow-jenkins             bot          0.978
 ```
 
-**With --file**
+**With --input-file**
 ```
-$ rabbit --file logins.txt --key token
+$ rabbit --input-file logins.txt --key token
                   account      prediction     confidence
        tensorflow-jenkins             bot          0.978
            johnpbloch-bot             bot          0.996
       github-actions[bot]             app            1.0
 ```
 
-**With combined use of positional argument and --file**
+**With combined use of positional argument and --input-file**
 ```
-$ rabbit tensorflow-jenkins --file logins.txt --key token
+$ rabbit tensorflow-jenkins --input-file logins.txt --key token
                   account      prediction     confidence
        tensorflow-jenkins             bot          0.978
            johnpbloch-bot             bot          0.996
@@ -129,7 +124,7 @@ $ rabbit tensorflow-jenkins --file logins.txt --key token
 
 **With --start-time**
 ```
-$ rabbit --file logins.txt --key token --start-time '2023-09-19 00:00:00'
+$ rabbit --input-file logins.txt --key token --start-time '2023-09-19 00:00:00'
                   account      prediction     confidence
        tensorflow-jenkins             bot          0.978
            johnpbloch-bot             bot          0.996
@@ -138,7 +133,7 @@ $ rabbit --file logins.txt --key token --start-time '2023-09-19 00:00:00'
 
 **With --min-events**
 ```
-$ rabbit --file logins.txt --key token --min-events 10
+$ rabbit --input-file logins.txt --key token --min-events 10
                   account      prediction      confidence
        tensorflow-jenkins             bot           0.993
            johnpbloch-bot             bot           0.996
@@ -147,7 +142,7 @@ $ rabbit --file logins.txt --key token --min-events 10
 
 **With human contributor**
 ```
-$ rabbit --file logins.txt --key token
+$ rabbit --input-file logins.txt --key token
                   account      prediction      confidence
        tensorflow-jenkins             bot           0.993
            johnpbloch-bot             bot           0.996
@@ -157,7 +152,7 @@ $ rabbit --file logins.txt --key token
 
 **With --max-queries**
 ```
-$ rabbit --file logins.txt --key token --max-queries 1
+$ rabbit --input-file logins.txt --key token --max-queries 1
                   account      prediction      confidence
        tensorflow-jenkins             bot           0.956
            johnpbloch-bot             bot           0.976
@@ -167,7 +162,7 @@ $ rabbit --file logins.txt --key token --max-queries 1
 
 **With --verbose**
 ```
-$ rabbit --file logins.txt --key token --verbose
+$ rabbit --input-file logins.txt --key token --verbose
                   account      events      activities      NAT_mean      NT      DCAT_median      NOR      DCA_gini      NAR_mean      prediction      confidence
        tensorflow-jenkins         160            160          40.0      4.0             2.39      2.0         0.426        53.333             bot           0.993
            johnpbloch-bot         300            300         100.0      3.0            0.001      1.0         0.872         100.0             bot           0.996
@@ -177,16 +172,16 @@ $ rabbit --file logins.txt --key token --verbose
 
 **With --csv or --json**
 ```
-$ rabbit --file logins.txt --key token --csv predictions.csv
+$ rabbit --input-file logins.txt --key token --csv predictions.csv
 ```
 
 ```
-$ rabbit --file logins.txt --key token --json predictions.json
+$ rabbit --input-file logins.txt --key token --json predictions.json
 ```
 
 **With --incremental**
 ```
-$ rabbit --file logins.txt --key token --incremental
+$ rabbit --input-file logins.txt --key token --incremental
 ```
 
 ## License
