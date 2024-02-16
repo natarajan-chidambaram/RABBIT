@@ -32,7 +32,7 @@ __requirement__ = [
         'pandas==2.0.3',
         'tqdm==4.65.1',
         'python-dateutil==2.8.2',
-        'scikit-learn == 1.3.0',
+        'scikit-learn == 1.4.1.post1',
         'requests==2.31.0',
         'scipy==1.10.1',
         'urllib3==2.0.6',
