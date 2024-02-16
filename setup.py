@@ -35,7 +35,7 @@ __requirement__ = [
         'scikit-learn == 1.3.0',
         'requests==2.31.0',
         'scipy==1.10.1',
-        'urllib3==2.0.6',
+        'urllib3==2.2.0',
         'xgboost==1.7.6'
 ]
 
