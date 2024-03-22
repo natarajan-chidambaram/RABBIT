@@ -34,7 +34,7 @@ __requirement__ = [
         'python-dateutil==2.8.2',
         'scikit-learn == 1.3.0',
         'requests==2.31.0',
-        'scipy==1.10.1',
+        'scipy==1.12',
         'urllib3==2.0.6',
         'xgboost==1.7.6'
 ]
