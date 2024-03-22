@@ -1,5 +1,5 @@
 pip==23.2.1
-pandas==2.0.3
+pandas==2.2.1
 numpy==1.26.4
 requests==2.31.0
 scikit-learn==1.4.1.post1
