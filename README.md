@@ -47,6 +47,8 @@ To install RABBIT, execute the following command:
 pip install git+https://github.com/natarajan-chidambaram/RABBIT
 ```
 
+Alternatively, `RABBIT` is available via [Nix](https://search.nixos.org/packages?channel=unstable&show=rabbit&from=0&size=50&sort=relevance&type=packages&query=rabbit).
+
 ## Usage
 To execute **RABBIT**, you need to provide a *GitHub personal access token* (API key). You can follow the instructions [here](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token) to obtain such a token.
 
