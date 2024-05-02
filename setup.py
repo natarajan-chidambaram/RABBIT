@@ -31,7 +31,7 @@ __requirement__ = [
         'pip==24.0',
         'numpy==1.26.4',
         'pandas==2.2.1',
-        'tqdm==4.66.2',
+        'tqdm==4.66.3',
         'python-dateutil==2.9.0.post0',
         'scikit-learn == 1.4.1.post1',
         'requests==2.31.0',
