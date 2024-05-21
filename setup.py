@@ -34,7 +34,7 @@ __requirement__ = [
         'tqdm==4.66.2',
         'python-dateutil==2.9.0.post0',
         'scikit-learn == 1.4.1.post1',
-        'requests==2.31.0',
+        'requests==2.32.2',
         'scipy==1.12',
         'urllib3==2.2.1',
         'xgboost==2.0.3'
