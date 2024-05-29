@@ -1,3 +1,5 @@
+[![SWH](https://archive.softwareheritage.org/badge/origin/https://github.com/natarajan-chidambaram/RABBIT/)](https://archive.softwareheritage.org/browse/origin/?origin_url=https://github.com/natarajan-chidambaram/RABBIT)
+
 # RABBIT
 
 RABBIT is a recursive acronym for "RABBIT is an Activity-Based Bot Identification Tool".
