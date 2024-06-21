@@ -4,7 +4,7 @@ from codecs import open # To use a consistent encoding
 
 
 __package__ = 'rabbit'
-__version__ = '1.0.2'
+__version__ = '1.0.4'
 __licence__ = 'Apache2.0'
 __maintainer__ = 'Natarajan Chidambaram'
 __email__ = 'natarajan.chidambaram@umons.ac.be'
