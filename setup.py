@@ -28,7 +28,7 @@ __classifiers__=[
         'Programming Language :: Python :: 3.9',
     ]
 __requirement__ = [
-        'pip==24.0',
+        'pip==24.1',
         'numpy==1.26.4',
         'pandas==2.2.2',
         'tqdm==4.66.4',
