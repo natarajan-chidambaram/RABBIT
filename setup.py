@@ -30,7 +30,7 @@ __classifiers__=[
 __requirement__ = [
         'pip==24.0',
         'numpy==1.26.4',
-        'pandas==2.2.1',
+        'pandas==2.2.2',
         'tqdm==4.66.2',
         'python-dateutil==2.9.0.post0',
         'scikit-learn == 1.4.1.post1',
