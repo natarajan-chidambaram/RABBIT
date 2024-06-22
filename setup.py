@@ -37,7 +37,7 @@ __requirement__ = [
         'requests==2.32.3',
         'scipy==1.13.1',
         'urllib3==2.2.2',
-        'xgboost==2.0.3'
+        'xgboost==2.1.0'
 ]
 
 setup(
