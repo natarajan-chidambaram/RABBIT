@@ -1,0 +1,13 @@
+.DS_Store
+__pycache__/*
+rvenv/*
+code/__pycache__/*
+.ipynb_checkpoints/*
+RABBIT copy.py
+rabbit copy 2.py
+*.csv
+predictions.json
+contributor_names.txt
+preds.txt
+code/__init__.py
+test_names.txt
