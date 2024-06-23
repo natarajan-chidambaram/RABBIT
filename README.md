@@ -76,6 +76,11 @@ _This parameter is mandatory and you can obtain an access token as described ear
 
 _The default minimum number of events is 5._
 
+`--min-confidence <MIN_CONFIDENCE>` 		**Minimum confidence on prediction to stop further querying.**
+> Example: $ rabbit --input-file logins.txt --key token --min-confidence 0.5
+
+_The default minimum confidence is 1.0_
+
 `--max-queries <NUM_QUERIES>` 		**Maximum number of queries that will be made to the GitHub Events API for each account.**
 > Example: $ rabbit --input-file logins.txt --key token --queries 2
 
@@ -121,7 +126,7 @@ $ rabbit natarajan-chidambaram --input-file logins.txt --key token
                   account      prediction     confidence
     natarajan-chidambaram           human          0.984 
        tensorflow-jenkins             bot          0.978
-           johnpbloch-bot             bot          0.996
+           johnpbloch-bot             bot          0.796
       github-actions[bot]             app            1.0
 ```
 
@@ -130,7 +135,16 @@ $ rabbit natarajan-chidambaram --input-file logins.txt --key token
 $ rabbit --input-file logins.txt --key token --min-events 10
                   account      prediction      confidence
        tensorflow-jenkins             bot           0.993
-           johnpbloch-bot             bot           0.996
+           johnpbloch-bot             bot           0.796
+      github-actions[bot]             app             1.0
+```
+
+**With --min-confidence**
+```
+$ rabbit --input-file logins.txt --key token --min-confidence 0.5
+                  account      prediction      confidence
+       tensorflow-jenkins             bot           0.843
+           johnpbloch-bot             bot           0.659
       github-actions[bot]             app             1.0
 ```
 
@@ -139,7 +153,7 @@ $ rabbit --input-file logins.txt --key token --min-events 10
 $ rabbit --input-file logins.txt --key token --max-queries 1
                   account      prediction      confidence
        tensorflow-jenkins             bot           0.956
-           johnpbloch-bot             bot           0.976
+           johnpbloch-bot             bot           0.796
       github-actions[bot]             app            1.0
     natarajan-chidambaram           human           0.984
 ```
@@ -147,11 +161,11 @@ $ rabbit --input-file logins.txt --key token --max-queries 1
 **With --verbose**
 ```
 $ rabbit --input-file logins.txt --key token --verbose
-                  account      events      activities      NAT_mean      NT      DCAT_median      NOR      DCA_gini      NAR_mean      prediction      confidence
-       tensorflow-jenkins         160            160          40.0      4.0             2.39      2.0         0.426        53.333             bot           0.993
-           johnpbloch-bot         300            300         100.0      3.0            0.001      1.0         0.872         100.0             bot           0.996
-      github-actions[bot]         NaN            NaN           NaN      NaN              NaN      NaN           NaN           NaN             app             1.0
-    natarajan-chidambaram          74             74          14.8      5.0            0.211      3.0         0.951          24.5           human           0.984
+                  account      events      activities      NA      NT      NOR   ...   NAT_std      NAT_gini      NAT_IQR      prediction      confidence
+       tensorflow-jenkins         160            160      160       4        2   ...    17.093         0.541       15.503             bot           0.993
+           johnpbloch-bot         300            300      300       3        1   ...    23.452         0.724       21.451             bot           0.796
+      github-actions[bot]         NaN            NaN      NaN     NaN      NaN   ...       NaN           NaN          NaN             app             1.0
+    natarajan-chidambaram          74             74       74       5        1   ...    14.834         0.924       12.113           human           0.984
 ```
 
 **With --csv or --json**

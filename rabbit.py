@@ -225,11 +225,12 @@ def QueryEvents(contributor, key, page, max_queries):
     
     return(list_event, query_failed)
 
-def MakePrediction(contributor, apikey, min_events, max_queries, verbose):
+def MakePrediction(contributor, apikey, min_events, min_confidence, max_queries, verbose):
     '''
-    args: contributor (str) - name of the contributor for whom the prediciton needs to be made
+    args: contributor (str) - name of the contributor for whom the prediction needs to be made
           apikey (str) - the API key
-          min_events (int) - minimum number of events that a contributor should have performed to consider them for prediciton
+          min_events (int) - minimum number of events that a contributor should have performed to consider them for prediction
+          min_confidence (float) - minimum confidence on prediction to stop further querying
           max_queries (int) - maximum number of queries to be made to GitHub Events API
           verbose (bool) - If True, displays the features, #events and #activities that were used to make the prediction
     
@@ -239,7 +240,8 @@ def MakePrediction(contributor, apikey, min_events, max_queries, verbose):
                  2) Identify the activities performed by the contributor through queried events
                  3) Compute activity features
                  4) Invoke the trained model
-                 5) Predict the proability that the contributor is a bot 
+                 5) Predict the probability that the contributor is a bot 
+                 6) Compute confidence from this probability
     '''
     
     page=1
@@ -247,6 +249,7 @@ def MakePrediction(contributor, apikey, min_events, max_queries, verbose):
     df_events_obt = pd.DataFrame()
     activities = pd.DataFrame()
     result_cols = ALL_FEATURES + ['prediction','confidence']
+    confidence = 0.0
 
     if('[bot]' in contributor):
         contributor_type, query_failed = QueryUser(contributor, apikey, max_queries)
@@ -265,7 +268,7 @@ def MakePrediction(contributor, apikey, min_events, max_queries, verbose):
             not_app = False
 
     if(not_app):
-        while(page <= max_queries):
+        while(page <= max_queries and (confidence != np.nan and confidence <= min_confidence)):
             events, query_failed = QueryEvents(contributor, apikey, page, max_queries)
             if(len(events)>0):
                 df_events_obt = pd.concat([df_events_obt, pd.DataFrame.from_dict(events, orient = 'columns')])
@@ -282,7 +285,7 @@ def MakePrediction(contributor, apikey, min_events, max_queries, verbose):
                 if(len(events) == 100):
                         page = page + 1
                 else:
-                    break
+                    page=max_queries+1
             elif(query_failed):
                 result = pd.DataFrame([[np.nan]*len(ALL_FEATURES) +['invalid',np.nan]], 
                                     columns=result_cols,
@@ -298,56 +301,63 @@ def MakePrediction(contributor, apikey, min_events, max_queries, verbose):
 
                 return(result)
             else:
-                break
-        if(df_events_obt.shape[0]>0):
-            activities = gat.activity_identification(df_events_obt)
-        
-        if(len(activities)>0):
-            # with warnings.catch_warnings():
-            #     warnings.simplefilter("ignore", category=RuntimeWarning)
-            activity_features = (
-                imf.extract_features(activities)
-                .set_index([[contributor]])
-            )
-            # activity_features=(
-            #     pd.DataFrame(imf.extract_features(activities), 
-            #                  index=[contributor], 
-            #                  columns=ALL_FEATURES[2:]
-            #     ))
-        # print(activity_features)
-            if(df_events_obt.shape[0]>=min_events):
-                model = get_model()
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore", category=UserWarning)
-                    probability = model.predict_proba(activity_features)
-                prediction, confidence = compute_confidence(probability[0][1])
-            
-            else:
-                prediction = 'unknown'
-                confidence = np.nan
-
-            result = activity_features.assign(events = df_events_obt.shape[0],
-                                            activities = activities.shape[0],
-                                            prediction = prediction, 
-                                            confidence = confidence
-                                            )
-            result = format_result(result, verbose)
-
-            return(result)
-        else:
-            result = pd.DataFrame([[0,0]+[np.nan]*(len(ALL_FEATURES)-2)+['unknown',np.nan]], 
+                result = pd.DataFrame([[0,0]+[np.nan]*(len(ALL_FEATURES)-2)+['unknown',np.nan]], 
                                 columns=result_cols,
                                 index=[contributor])
+                result = format_result(result, verbose)
+                # break
+        
+            if(df_events_obt.shape[0]>0):
+                activities = gat.activity_identification(df_events_obt)
+            
+            if(len(activities)>0):
+                # with warnings.catch_warnings():
+                #     warnings.simplefilter("ignore", category=RuntimeWarning)
+                activity_features = (
+                    imf.extract_features(activities)
+                    .set_index([[contributor]])
+                )
+                    # activity_features=(
+                    #     pd.DataFrame(imf.extract_features(activities), 
+                    #                  index=[contributor], 
+                    #                  columns=ALL_FEATURES[2:]
+                    #     ))
+                # print(activity_features)
+                if(df_events_obt.shape[0]>=min_events):
+                    model = get_model()
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore", category=UserWarning)
+                        probability = model.predict_proba(activity_features)
+                    prediction, confidence = compute_confidence(probability[0][1])
+                
+                else:
+                    prediction = 'unknown'
+                    confidence = np.nan
+                    # break
+
+                result = activity_features.assign(events = df_events_obt.shape[0],
+                                                activities = activities.shape[0],
+                                                prediction = prediction, 
+                                                confidence = confidence
+                                                )
+                # result = format_result(result, verbose)
+
+                # return(result)
+            else:
+                result = pd.DataFrame([[0,0]+[np.nan]*(len(ALL_FEATURES)-2)+['unknown',np.nan]], 
+                                    columns=result_cols,
+                                    index=[contributor])
             result = format_result(result, verbose)
         
     return(result)
 
-def get_results(contributors_name_file, contributor_name, apikey, min_events, max_queries, output_type, save_path, verbose, incremental):
+def get_results(contributors_name_file, contributor_name, apikey, min_events, min_confidence, max_queries, output_type, save_path, verbose, incremental):
     '''
-    args: contributors_name_file (str) - path to the text file containing contributors names for which the predicitons need to be made
+    args: contributors_name_file (str) - path to the text file containing contributors names for which the predictions need to be made
           contributor_name (str) - login name of GitHub account for which the type needs to be predicted
           apikey (str) - the API key
-          min_events (int) - minimum number of events that a contributor should have performed to consider them for prediciton
+          min_events (int) - minimum number of events that a contributor should have performed to consider them for prediction
+          min_confidence (float) - minimum confidence on prediction to stop further querying
           max_queries (int) - maximum number of queries to be made to GitHub Events API
           verbose (bool) - if True, displays the features that were used to make the prediction
           result (DataFrame) - DataFrame of prediction results
@@ -369,7 +379,7 @@ def get_results(contributors_name_file, contributor_name, apikey, min_events, ma
         contributors.extend(pd.read_csv(contributors_name_file, sep=' ', header=None, index_col=0).index.to_list())
     all_results = pd.DataFrame()
     for contributor in tqdm(contributors):
-        prediction_result = MakePrediction(contributor, apikey, min_events, max_queries, verbose)
+        prediction_result = MakePrediction(contributor, apikey, min_events, min_confidence, max_queries, verbose)
         all_results = pd.concat([all_results, prediction_result])
         if incremental:
             save_results(all_results, output_type, save_path)
@@ -458,7 +468,7 @@ Please read more about it in the repository readme file.')
     
     if args.input_file is None and len(args.account) == 0:
         sys.exit('The login name of an acount or a .txt file containing login names for accounts should be \
-provided to the tool. Please read more about it in the respository readme file.')
+provided to the tool. Please read more about it in the repository readme file.')
     
     if args.min_events < 1 or args.min_events > 300:
         sys.exit('Minimum number of events to make a prediction should be between 1 and 300 including both.')
@@ -466,7 +476,7 @@ provided to the tool. Please read more about it in the respository readme file.'
         min_events = args.min_events
     
     if args.min_confidence <0.0 or args.min_confidence > 1.0:
-        sys.exit('Minimum confidence on prediction to stop querying should be between 0.0 and 1.0 including both.')
+        sys.exit('Minimum confidence on prediction to stop further querying should be between 0.0 and 1.0 including both.')
     else:
         min_confidence = args.min_confidence
 
@@ -484,6 +494,7 @@ provided to the tool. Please read more about it in the respository readme file.'
                 args.account,
                 apikey, 
                 min_events, 
+                min_confidence,
                 args.max_queries, 
                 # time_after, 
                 output_type,
