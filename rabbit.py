@@ -5,14 +5,15 @@ import requests
 import sys
 import argparse
 import time
-import dateutil
-import xgboost as xgb
+from sklearn.ensemble import GradientBoostingClassifier
+import joblib
 import site
 from tqdm import tqdm
 
 import GenerateActivities as gat
 import ExtractEvent as eev
-import ComputeFeatures as cfe
+# import ComputeFeatures as cfe
+import important_features as imf
 
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -20,6 +21,15 @@ from dateutil.relativedelta import relativedelta
 TIMEOUT_WAITING_TIME = 30
 CONNECTION_ERROR_WAITING_TIME = 10
 QUERY_LIMIT_RESET_OVERHEAD_TIME = 120
+ALL_FEATURES = ['events','activities', 'NA','NT','NOR','ORR',
+                'DCA_mean','DCA_median','DCA_std','DCA_gini',
+                'NAR_mean','NAR_median','NAR_gini','NAR_IQR',
+                'NTR_mean','NTR_median','NTR_std','NTR_gini',
+                'NCAR_mean','NCAR_std','NCAR_IQR',
+                'DCAR_mean','DCAR_median','DCAR_std','DCAR_IQR',
+                'DAAR_mean','DAAR_median','DAAR_std','DAAR_gini','DAAR_IQR',
+                'DCAT_mean','DCAT_median','DCAT_std','DCAT_gini','DCAT_IQR',
+                'NAT_mean','NAT_median','NAT_std','NAT_gini','NAT_IQR']
 
 def time_to_pause(nextResetTime):
     '''    
@@ -48,16 +58,15 @@ def get_model():
     description: Load the bot identification model
     '''
 
-    bot_identification_model = xgb.XGBClassifier()
-    for dir in site.getsitepackages():
-        if dir.endswith('site-packages'):
-            target_dir = dir
-        else:
-            target_dir = site.getsitepackages()[0]
-    bot_identification_model.load_model(f'{target_dir}/rabbit_model.json')
-    # filename = 'rabbit_model.json'
+    model_file = 'rabbit_model.joblib'
     # bot_identification_model = xgb.XGBClassifier()
-    # bot_identification_model.load_model(filename)
+    # for dir in site.getsitepackages():
+    #     if dir.endswith('site-packages'):
+    #         target_dir = dir
+    #     else:
+    #         target_dir = site.getsitepackages()[0]
+    # bot_identification_model.load_model(f'{target_dir}/model_file')
+    bot_identification_model = joblib.load(model_file)
     
     return(bot_identification_model)
 
@@ -91,11 +100,7 @@ def format_result(result, verbose):
     '''
 
     if verbose:
-        result = result[['events','activities',
-                        'NAT_mean','NT',
-                        'DCAT_median','NOR',
-                        'DCA_gini','NAR_mean',
-                        'prediction','confidence']]
+        result = result[ALL_FEATURES+['prediction','confidence']]
     else:
         result = result[['prediction','confidence']]
     
@@ -241,23 +246,19 @@ def MakePrediction(contributor, apikey, min_events, max_queries, verbose):
     not_app = True
     df_events_obt = pd.DataFrame()
     activities = pd.DataFrame()
-    all_features = ['events','activities',
-                    'NAT_mean','NT',
-                    'DCAT_median','NOR',
-                    'DCA_gini','NAR_mean']
-    result_cols = all_features + ['prediction','confidence']
+    result_cols = ALL_FEATURES + ['prediction','confidence']
 
     if('[bot]' in contributor):
         contributor_type, query_failed = QueryUser(contributor, apikey, max_queries)
         if(contributor_type == 'Bot'):
-            result = pd.DataFrame([[np.nan]*len(all_features) +['app',1.0]], 
+            result = pd.DataFrame([[np.nan]*len(ALL_FEATURES) +['app',1.0]], 
                                         columns=result_cols,
                                         index=[contributor])
             result = format_result(result, verbose)
             not_app = False
         
         elif(query_failed):
-            result = pd.DataFrame([[np.nan]*len(all_features) +['invalid',np.nan]], 
+            result = pd.DataFrame([[np.nan]*len(ALL_FEATURES) +['invalid',np.nan]], 
                                 columns=result_cols,
                                 index=[contributor])
             result = format_result(result, verbose)
@@ -267,7 +268,7 @@ def MakePrediction(contributor, apikey, min_events, max_queries, verbose):
         while(page <= max_queries):
             events, query_failed = QueryEvents(contributor, apikey, page, max_queries)
             if(len(events)>0):
-                df_events_obt = pd.concat([df_events_obt, pd.DataFrame.from_dict(events, orient = 'columns').assign(page=page)])
+                df_events_obt = pd.concat([df_events_obt, pd.DataFrame.from_dict(events, orient = 'columns')])
                 df_events_obt['created_at'] = pd.to_datetime(df_events_obt.created_at, errors='coerce', format='%Y-%m-%dT%H:%M:%SZ').dt.tz_localize(None)
                 # time_after = pd.to_datetime(time_after, errors='coerce', format='%Y-%m-%d %H:%M:%S').tz_localize(None)
                 
@@ -283,14 +284,14 @@ def MakePrediction(contributor, apikey, min_events, max_queries, verbose):
                 else:
                     break
             elif(query_failed):
-                result = pd.DataFrame([[np.nan]*len(all_features) +['invalid',np.nan]], 
+                result = pd.DataFrame([[np.nan]*len(ALL_FEATURES) +['invalid',np.nan]], 
                                     columns=result_cols,
                                     index=[contributor])
                 result = format_result(result, verbose)
                 
                 return(result)
             elif(page==1):
-                result = pd.DataFrame([[0,0]+[np.nan]*(len(all_features)-2)+['unknown',np.nan]], 
+                result = pd.DataFrame([[0,0]+[np.nan]*(len(ALL_FEATURES)-2)+['unknown',np.nan]], 
                                     columns=result_cols,
                                     index=[contributor])
                 result = format_result(result, verbose)
@@ -302,21 +303,23 @@ def MakePrediction(contributor, apikey, min_events, max_queries, verbose):
             activities = gat.activity_identification(df_events_obt)
         
         if(len(activities)>0):
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", category=RuntimeWarning)
-                activity_features = cfe.extract_features(activities)
-            activity_features = pd.DataFrame([activity_features], 
-                                                index=[contributor], 
-                                                columns=['NAT_mean',
-                                                        'NT',
-                                                        'DCAT_median',
-                                                        'NOR',
-                                                        'DCA_gini',
-                                                        'NAR_mean']
-                                            )
+            # with warnings.catch_warnings():
+            #     warnings.simplefilter("ignore", category=RuntimeWarning)
+            activity_features = (
+                imf.extract_features(activities)
+                .set_index([[contributor]])
+            )
+            # activity_features=(
+            #     pd.DataFrame(imf.extract_features(activities), 
+            #                  index=[contributor], 
+            #                  columns=ALL_FEATURES[2:]
+            #     ))
+        # print(activity_features)
             if(df_events_obt.shape[0]>=min_events):
                 model = get_model()
-                probability = model.predict_proba(activity_features)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=UserWarning)
+                    probability = model.predict_proba(activity_features)
                 prediction, confidence = compute_confidence(probability[0][1])
             
             else:
@@ -332,7 +335,7 @@ def MakePrediction(contributor, apikey, min_events, max_queries, verbose):
 
             return(result)
         else:
-            result = pd.DataFrame([[0,0]+[np.nan]*(len(all_features)-2)+['unknown',np.nan]], 
+            result = pd.DataFrame([[0,0]+[np.nan]*(len(ALL_FEATURES)-2)+['unknown',np.nan]], 
                                 columns=result_cols,
                                 index=[contributor])
             result = format_result(result, verbose)
@@ -410,6 +413,9 @@ def arg_parser():
         '--min-events', metavar='MIN_EVENTS', type=int, required=False, default=5,
         help='Minimum number of events that are required to make a prediction. The default minimum number of events is 5.')
     parser.add_argument(
+        '--min-confidence', metavar='MIN_CONFIDENCE', type=float, required=False, default=1.0,
+        help='Minimum confidence threshold on prediction to stop further querying. The default minimum confidence is 1.0.')
+    parser.add_argument(
         '--max-queries', metavar='MAXQUERIES', type=int, required=False, default=3, choices=[1,2,3],
         help='Maximum number of queries to be made to the GitHub Events API for each account. The default number of queries is 3, allowed values are 1, 2 or 3.')
     parser.add_argument(
@@ -455,9 +461,14 @@ Please read more about it in the repository readme file.')
 provided to the tool. Please read more about it in the respository readme file.')
     
     if args.min_events < 1 or args.min_events > 300:
-        sys.exit('Minimum number of events to make a prediction should be between 1 and 300 including both')
+        sys.exit('Minimum number of events to make a prediction should be between 1 and 300 including both.')
     else:
         min_events = args.min_events
+    
+    if args.min_confidence <0.0 or args.min_confidence > 1.0:
+        sys.exit('Minimum confidence on prediction to stop querying should be between 0.0 and 1.0 including both.')
+    else:
+        min_confidence = args.min_confidence
 
     if args.csv != '':
         output_type = 'csv'
