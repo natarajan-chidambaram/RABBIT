@@ -285,7 +285,7 @@ def MakePrediction(contributor, apikey, min_events, min_confidence, max_queries,
                 if(len(events) == 100):
                         page = page + 1
                 else:
-                    page=max_queries+1
+                    page=max_queries+1 # loop breaking condition
             elif(query_failed):
                 result = pd.DataFrame([[np.nan]*len(ALL_FEATURES) +['invalid',np.nan]], 
                                     columns=result_cols,
@@ -305,6 +305,7 @@ def MakePrediction(contributor, apikey, min_events, min_confidence, max_queries,
                                 columns=result_cols,
                                 index=[contributor])
                 result = format_result(result, verbose)
+                page=max_queries+1 # loop breaking condition
                 # break
         
             if(df_events_obt.shape[0]>0):
