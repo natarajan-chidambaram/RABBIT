@@ -58,7 +58,7 @@ def get_model():
     description: Load the bot identification model
     '''
 
-    model_file = 'rabbit_model.joblib'
+    model_file = 'bimbas_model.joblib'
     for dir in site.getsitepackages():
         if dir.endswith('site-packages'):
             target_dir = dir
