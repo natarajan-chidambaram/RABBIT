@@ -28,7 +28,6 @@ __classifiers__=[
         'Programming Language :: Python :: 3.9',
     ]
 __requirement__ = [
-        'pip==24.1',
         'numpy==2.0.0',
         'pandas==2.2.2',
         'tqdm==4.66.4',
@@ -61,6 +60,7 @@ setup(
 
     install_requires = __requirement__,
 
+    # package_data={'':['rabbit_model.joblib']},
     include_package_data = True,
     packages = ['.'],
 
