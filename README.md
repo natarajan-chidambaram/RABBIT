@@ -6,7 +6,7 @@ RABBIT is a recursive acronym for "RABBIT is an Activity-Based Bot Identificatio
 It is based on a binary classifaction model to identify bot accounts based on their recent activities in GitHub.
 RABBIT is quite efficient, being able to predict thousands of accounts per hour, without reaching GitHub's imposed hourly API rate limit of 5,000 queries.
 
-The tool has been developed by Natarajan Chidambaram, researcher at the [Software Engineering Lab](http://informatique.umons.ac.be/genlog/) of the [University of Mons](https://www.umons.ac.be) (Belgium) as part of his PhD research in the context of [DigitalWallonia4.AI research project ARIAC (grant number 2010235)](https://www.digitalwallonia.be/ia/) and [TRAIL](https://trail.ac/en/). More details about the tool can be found in the  scientific publication cited below.
+The tool has been developed by Natarajan Chidambaram, researcher at the [Software Engineering Lab](http://informatique.umons.ac.be/genlog/) of the [University of Mons](https://www.umons.ac.be) (Belgium) as part of his PhD research in the context of [DigitalWallonia4.AI research project ARIAC (grant number 2010235)](https://www.digitalwallonia.be/ia/) and [TRAIL](https://trail.ac/en/). More details about the tool can be found in the scientific publication cited below.
 
 **Citation**: Natarajan Chidambaram, Tom Mens, and Alexandre Decan. 2024. ***RABBIT: A tool for identifying bot accounts based on their recent GitHub event history.*** In 21st International Conference on Mining Software Repositories (MSR ’24), April 15–16, 2024, Lisbon, Portugal. ACM, New York, NY, USA, 5 pages. https://doi.org/10.1145/3643991.3644877
 
@@ -109,6 +109,15 @@ $ rabbit natarajan-chidambaram tensorflow-jenkins --key token
                   account      prediction     confidence
     natarajan-chidambaram           human          0.984 
        tensorflow-jenkins             bot          0.978
+```
+
+**With GitHub Apps** (Note: Apps should have `[bot]' at the end of their name and should be given within quotes)
+```
+$ rabbit natarajan-chidambaram tensorflow-jenkins "github-actions[bot]" --key token
+                  account      prediction     confidence
+    natarajan-chidambaram           human          0.984 
+       tensorflow-jenkins             bot          0.978
+      github-actions[bot]             app            1.0
 ```
 
 **With --input-file**
