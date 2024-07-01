@@ -4,14 +4,15 @@
 
 RABBIT is a recursive acronym for "RABBIT is an Activity-Based Bot Identification Tool".
 It is based on a binary classifaction model to identify bot accounts based on their recent activities in GitHub.
-RABBIT is quite efficient, being able to predict thousands of accounts per hour, without reaching GitHub's imposed hourly API rate limit of 5,000 queries.
+RABBIT is quite efficient, being able to predict thousands of accounts per hour, without reaching GitHub's imposed hourly API rate limit of 5,000 queries per hour for authorised users.
 
-The tool has been developed by Natarajan Chidambaram, researcher at the [Software Engineering Lab](http://informatique.umons.ac.be/genlog/) of the [University of Mons](https://www.umons.ac.be) (Belgium) as part of his PhD research in the context of [DigitalWallonia4.AI research project ARIAC (grant number 2010235)](https://www.digitalwallonia.be/ia/) and [TRAIL](https://trail.ac/en/). More details about the tool can be found in the scientific publication cited below.
+The tool has been developed by Natarajan Chidambaram, researcher at the [Software Engineering Lab](http://informatique.umons.ac.be/genlog/) of the [University of Mons](https://www.umons.ac.be) (Belgium) as part of his PhD research in the context of [DigitalWallonia4.AI research project ARIAC (grant number 2010235)](https://www.digitalwallonia.be/ia/) and [TRAIL](https://trail.ac/en/). 
 
-**Citation**: Natarajan Chidambaram, Tom Mens, and Alexandre Decan. 2024. ***RABBIT: A tool for identifying bot accounts based on their recent GitHub event history.*** In 21st International Conference on Mining Software Repositories (MSR ’24), April 15–16, 2024, Lisbon, Portugal. ACM, New York, NY, USA, 5 pages. https://doi.org/10.1145/3643991.3644877
+This tool is developed as part of the research article titled: "A Bot Identification Model and Tool based on GitHub Activity Sequences" that is submitted to Journal of Systems and Software.
+<!-- **Citation**: Natarajan Chidambaram, Tom Mens, and Alexandre Decan. 2024. ***RABBIT: A tool for identifying bot accounts based on their recent GitHub event history.*** In 21st International Conference on Mining Software Repositories (MSR ’24), April 15–16, 2024, Lisbon, Portugal. ACM, New York, NY, USA, 5 pages. https://doi.org/10.1145/3643991.3644877 -->
 
 ## How it works
-RABBIT accepts a GitHub account login name and/or a text file of multiple login names (one name per line) and requires a GitHub API key.
+RABBIT accepts a GitHub account login name and/or a text file of multiple login names (one name per line) and requires a GitHub API key if more than 15 queries are required to be made per hour.
 First the tool checks whether the login name corresponds to a valid existing account in GitHub and returns **invalid** otherwise. If the login name
 corresponds to a GitHub App (based on the login name ending with [bot] and the Bot type returned by a call to the GitHub Users API), the tool predicts **app**.
 For the remaining login names, a prediction of **bot**, **human** or **unknown** will be made after the following steps.
@@ -54,45 +55,46 @@ Alternatively, `RABBIT` is available via [Nix](https://search.nixos.org/packages
 ## Usage
 To execute **RABBIT**, you need to provide a *GitHub personal access token* (API key). You can follow the instructions [here](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token) to obtain such a token.
 
-You can execute the tool with all default parameters by running `rabbit <LOGIN_NAME> --key <APIKEY>`. 
+You can execute the tool with all default parameters by running `rabbit <LOGIN_NAME>`. 
 
 Here is the list of parameters:
 
 `<LOGIN_NAME>`            **Any number of positional arguments specifying the login names of the accounts that need to be predicted.**
-> Example: $ rabbit natarajan-chidambaram tommens --key token 
+> Example: $ rabbit natarajan-chidambaram tommens
 
 `--input-file <path/to/loginnames.txt>`            **A text input file with the login names (one name per line) of the accounts that need to  be predicted.**
-> Example: $ rabbit --input-file logins.txt --key token
+> Example: $ rabbit --input-file logins.txt
 
 _Either the positional argument `<LOGIN_NAME>` or `--input-file` is mandatory. In case both are given, then the accounts given with `--input-file` will be processed after the accounts given as positional arguments have been processed._
 
-`--key <APIKEY>` 			**GitHub personal access token (key) required to extract events from the GitHub Events API.**
+`--key <APIKEY>` 			**GitHub personal access token (key) to extract events from the GitHub Events API.**
+_Note: APIKEY (--key) is mandatory if more than 15 queries are required to be made per hour_
 > Example: $ rabbit --input-file logins.txt --key token
 
 _This parameter is mandatory and you can obtain an access token as described earlier_
 
 `--min-events <MIN_EVENTS>` 		**Minimum number of events that are required to make a prediction.**
-> Example: $ rabbit --input-file logins.txt --key token --min-events 10
+> Example: $ rabbit --input-file logins.txt --min-events 10
 
 _The default minimum number of events is 5._
 
 `--min-confidence <MIN_CONFIDENCE>` 		**Minimum confidence on prediction to stop further querying.**
-> Example: $ rabbit --input-file logins.txt --key token --min-confidence 0.5
+> Example: $ rabbit --input-file logins.txt --min-confidence 0.5
 
 _The default minimum confidence is 1.0_
 
 `--max-queries <NUM_QUERIES>` 		**Maximum number of queries that will be made to the GitHub Events API for each account.**
-> Example: $ rabbit --input-file logins.txt --key token --queries 2
+> Example: $ rabbit --input-file logins.txt --queries 2
 
 _The default number of queries is 3, allowed values are 1, 2 or 3._
 
 `--verbose`              		**Report the #events, #activities and values of the features that were used to make a prediction.**
-> Example: $ rabbit --input-file logins.txt --key token --verbose
+> Example: $ rabbit --input-file logins.txt --verbose
 
 _The default value is False._
 
 `--json <FILE_NAME.json>`                	**Outputs the result in json format.**
-> Example: $ rabbit --input-file logins.txt --key token --json output.json
+> Example: $ rabbit --input-file logins.txt --json output.json
 
 `--csv <FILE_NAME.csv>`                		**Saves the result in comma-separated values (csv) format.**
 
@@ -105,7 +107,7 @@ _The default value is False._
 
 **With positional arguments**
 ```
-$ rabbit natarajan-chidambaram tensorflow-jenkins --key token
+$ rabbit natarajan-chidambaram tensorflow-jenkins
                   account      prediction     confidence
     natarajan-chidambaram           human          0.984 
        tensorflow-jenkins             bot          0.978
@@ -113,7 +115,7 @@ $ rabbit natarajan-chidambaram tensorflow-jenkins --key token
 
 **With GitHub Apps** (Note: Apps should have `[bot]' at the end of their name and should be given within quotes)
 ```
-$ rabbit natarajan-chidambaram tensorflow-jenkins "github-actions[bot]" --key token
+$ rabbit natarajan-chidambaram tensorflow-jenkins "github-actions[bot]"
                   account      prediction     confidence
     natarajan-chidambaram           human          0.984 
        tensorflow-jenkins             bot          0.978
@@ -121,6 +123,15 @@ $ rabbit natarajan-chidambaram tensorflow-jenkins "github-actions[bot]" --key to
 ```
 
 **With --input-file**
+```
+$ rabbit --input-file logins.txt
+                  account      prediction     confidence
+       tensorflow-jenkins             bot          0.978
+           johnpbloch-bot             bot          0.996
+      github-actions[bot]             app            1.0
+```
+
+**With --key**
 ```
 $ rabbit --input-file logins.txt --key token
                   account      prediction     confidence
@@ -131,7 +142,7 @@ $ rabbit --input-file logins.txt --key token
 
 **With combined use of positional arguments and --input-file**
 ```
-$ rabbit natarajan-chidambaram --input-file logins.txt --key token
+$ rabbit natarajan-chidambaram --input-file logins.txt
                   account      prediction     confidence
     natarajan-chidambaram           human          0.984 
        tensorflow-jenkins             bot          0.978
@@ -141,7 +152,7 @@ $ rabbit natarajan-chidambaram --input-file logins.txt --key token
 
 **With --min-events**
 ```
-$ rabbit --input-file logins.txt --key token --min-events 10
+$ rabbit --input-file logins.txt --min-events 10
                   account      prediction      confidence
        tensorflow-jenkins             bot           0.993
            johnpbloch-bot             bot           0.796
@@ -150,7 +161,7 @@ $ rabbit --input-file logins.txt --key token --min-events 10
 
 **With --min-confidence**
 ```
-$ rabbit --input-file logins.txt --key token --min-confidence 0.5
+$ rabbit --input-file logins.txt --min-confidence 0.5
                   account      prediction      confidence
        tensorflow-jenkins             bot           0.843
            johnpbloch-bot             bot           0.659
@@ -159,7 +170,7 @@ $ rabbit --input-file logins.txt --key token --min-confidence 0.5
 
 **With --max-queries**
 ```
-$ rabbit --input-file logins.txt --key token --max-queries 1
+$ rabbit --input-file logins.txt --max-queries 1
                   account      prediction      confidence
        tensorflow-jenkins             bot           0.956
            johnpbloch-bot             bot           0.796
@@ -169,7 +180,7 @@ $ rabbit --input-file logins.txt --key token --max-queries 1
 
 **With --verbose**
 ```
-$ rabbit --input-file logins.txt --key token --verbose
+$ rabbit --input-file logins.txt --verbose
                   account      events      activities      NA      NT      NOR   ...   NAT_std      NAT_gini      NAT_IQR      prediction      confidence
        tensorflow-jenkins         160            160      160       4        2   ...    17.093         0.541       15.503             bot           0.993
            johnpbloch-bot         300            300      300       3        1   ...    23.452         0.724       21.451             bot           0.796
@@ -179,16 +190,16 @@ $ rabbit --input-file logins.txt --key token --verbose
 
 **With --csv or --json**
 ```
-$ rabbit --input-file logins.txt --key token --csv predictions.csv
+$ rabbit --input-file logins.txt --csv predictions.csv
 ```
 
 ```
-$ rabbit --input-file logins.txt --key token --json predictions.json
+$ rabbit --input-file logins.txt --json predictions.json
 ```
 
 **With --incremental**
 ```
-$ rabbit --input-file logins.txt --key token --incremental
+$ rabbit --input-file logins.txt --incremental
 ```
 
 ## License

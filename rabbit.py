@@ -160,8 +160,11 @@ def QueryUser(contributor, key, max_queries):
 
     try:
         query = f'{QUERY_ROOT}/users/{contributor}'
-        headers = {'Authorization': 'token ' + key}
-        response = requests.get(query, headers=headers)
+        if key:
+            headers = {'Authorization': 'token ' + key}
+            response = requests.get(query, headers=headers)
+        else:
+            response = requests.get(query)
 
         if response.ok:
             json_response = response.json()
@@ -201,8 +204,11 @@ def QueryEvents(contributor, key, page, max_queries):
 
     try:
         query = f'{QUERY_ROOT}/users/{contributor}/events?per_page=100&page={page}'
-        headers = {'Authorization': 'token ' + key}
-        response = requests.get(query, headers=headers)
+        if key:
+            headers = {'Authorization': 'token ' + key}
+            response = requests.get(query, headers=headers)
+        else:
+            response = requests.get(query)
 
         if response.ok:
             json_response = response.json()
@@ -429,8 +435,8 @@ def arg_parser():
         '--max-queries', metavar='MAXQUERIES', type=int, required=False, default=3, choices=[1,2,3],
         help='Maximum number of queries to be made to the GitHub Events API for each account. The default number of queries is 3, allowed values are 1, 2 or 3.')
     parser.add_argument(
-        '--key', metavar='APIKEY', required=True, type=str, default='',
-        help='GitHub API key to extract events from GitHub Events API')
+        '--key', metavar='APIKEY', required=False, type=str, default='',
+        help='GitHub API key to extract events from GitHub Events API. API key is required if the number of API queries exceed 15 per hour.')
     parser.add_argument(
         '--csv', metavar='FILE_NAME.csv', required=False, type=str, default='',
         help='Saves the result in comma-separated values (csv) format.')
@@ -461,8 +467,9 @@ def cli():
     #     time_after = datetime.strftime(datetime.now()+relativedelta(days=-91), '%Y-%m-%d %H:%M:%S')
 
     if args.key == '' or len(args.key) < 40:
-        sys.exit('A valid GitHub personal access token is required to start the process. \
+        warnings.warn('A valid GitHub personal access token is required if more than 15 queries are required to be made per hour. \
 Please read more about it in the repository readme file.')
+        apikey = None
     else:
         apikey = args.key
     
