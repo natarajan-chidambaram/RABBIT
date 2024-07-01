@@ -67,7 +67,7 @@ Here is the list of parameters:
 
 _Either the positional argument `<LOGIN_NAME>` or `--input-file` is mandatory. In case both are given, then the accounts given with `--input-file` will be processed after the accounts given as positional arguments have been processed._
 
-`--key <APIKEY>` 			**GitHub personal access token (key) to extract events from the GitHub Events API.**
+`--key <APIKEY>` 			**GitHub personal access token (key) to extract events from the GitHub Events API.**    
 _Note: APIKEY (--key) is mandatory if more than 15 queries are required to be made per hour_
 > Example: $ rabbit --input-file logins.txt --key token
 
