@@ -259,21 +259,21 @@ def MakePrediction(contributor, apikey, min_events, min_confidence, max_queries,
     if('[bot]' in contributor):
         contributor_type, query_failed = QueryUser(contributor, apikey, max_queries)
         if(contributor_type == 'Bot'):
-            result = pd.DataFrame([[np.nan]*len(ALL_FEATURES) +['app',1.0]], 
+            result = pd.DataFrame([['-']*len(ALL_FEATURES) +['app',1.0]], 
                                         columns=result_cols,
                                         index=[contributor])
             result = format_result(result, verbose)
             not_app = False
         
         elif(query_failed):
-            result = pd.DataFrame([[np.nan]*len(ALL_FEATURES) +['invalid',np.nan]], 
+            result = pd.DataFrame([['-']*len(ALL_FEATURES) +['invalid','-']], 
                                 columns=result_cols,
                                 index=[contributor])
             result = format_result(result, verbose)
             not_app = False
 
     if(not_app):
-        while(page <= max_queries and (confidence != np.nan and confidence <= min_confidence)):
+        while(page <= max_queries and (confidence != '-' and confidence <= min_confidence)):
             events, query_failed = QueryEvents(contributor, apikey, page, max_queries)
             if(len(events)>0):
                 df_events_obt = pd.concat([df_events_obt, pd.DataFrame.from_dict(events, orient = 'columns')])
@@ -292,21 +292,21 @@ def MakePrediction(contributor, apikey, min_events, min_confidence, max_queries,
                 else:
                     page=max_queries+1 # loop breaking condition
             elif(query_failed):
-                result = pd.DataFrame([[np.nan]*len(ALL_FEATURES) +['invalid',np.nan]], 
+                result = pd.DataFrame([['-']*len(ALL_FEATURES) +['invalid','-']], 
                                     columns=result_cols,
                                     index=[contributor])
                 result = format_result(result, verbose)
                 
                 return(result)
             elif(page==1):
-                result = pd.DataFrame([[0,0]+[np.nan]*(len(ALL_FEATURES)-2)+['unknown',np.nan]], 
+                result = pd.DataFrame([[0,0]+['-']*(len(ALL_FEATURES)-2)+['unknown','-']], 
                                     columns=result_cols,
                                     index=[contributor])
                 result = format_result(result, verbose)
 
                 return(result)
             else:
-                result = pd.DataFrame([[0,0]+[np.nan]*(len(ALL_FEATURES)-2)+['unknown',np.nan]], 
+                result = pd.DataFrame([[0,0]+['-']*(len(ALL_FEATURES)-2)+['unknown','-']], 
                                 columns=result_cols,
                                 index=[contributor])
                 result = format_result(result, verbose)
@@ -338,7 +338,7 @@ def MakePrediction(contributor, apikey, min_events, min_confidence, max_queries,
                 
                 else:
                     prediction = 'unknown'
-                    confidence = np.nan
+                    confidence = '-'
                     # break
 
                 result = activity_features.assign(events = df_events_obt.shape[0],
@@ -350,7 +350,7 @@ def MakePrediction(contributor, apikey, min_events, min_confidence, max_queries,
 
                 # return(result)
             else:
-                result = pd.DataFrame([[0,0]+[np.nan]*(len(ALL_FEATURES)-2)+['unknown',np.nan]], 
+                result = pd.DataFrame([[0,0]+['-']*(len(ALL_FEATURES)-2)+['unknown','-']], 
                                     columns=result_cols,
                                     index=[contributor])
             result = format_result(result, verbose)
