@@ -5,14 +5,15 @@ import requests
 import sys
 import argparse
 import time
-import dateutil
-import xgboost as xgb
+from sklearn.ensemble import GradientBoostingClassifier
+import joblib
 import site
 from tqdm import tqdm
 
 import GenerateActivities as gat
 import ExtractEvent as eev
-import ComputeFeatures as cfe
+# import ComputeFeatures as cfe
+import important_features as imf
 
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -20,6 +21,15 @@ from dateutil.relativedelta import relativedelta
 TIMEOUT_WAITING_TIME = 30
 CONNECTION_ERROR_WAITING_TIME = 10
 QUERY_LIMIT_RESET_OVERHEAD_TIME = 120
+ALL_FEATURES = ['events','activities', 'NA','NT','NOR','ORR',
+                'DCA_mean','DCA_median','DCA_std','DCA_gini',
+                'NAR_mean','NAR_median','NAR_gini','NAR_IQR',
+                'NTR_mean','NTR_median','NTR_std','NTR_gini',
+                'NCAR_mean','NCAR_std','NCAR_IQR',
+                'DCAR_mean','DCAR_median','DCAR_std','DCAR_IQR',
+                'DAAR_mean','DAAR_median','DAAR_std','DAAR_gini','DAAR_IQR',
+                'DCAT_mean','DCAT_median','DCAT_std','DCAT_gini','DCAT_IQR',
+                'NAT_mean','NAT_median','NAT_std','NAT_gini','NAT_IQR']
 
 def time_to_pause(nextResetTime):
     '''    
@@ -48,16 +58,14 @@ def get_model():
     description: Load the bot identification model
     '''
 
-    bot_identification_model = xgb.XGBClassifier()
+    model_file = 'bimbas.joblib'
     for dir in site.getsitepackages():
         if dir.endswith('site-packages'):
             target_dir = dir
         else:
             target_dir = site.getsitepackages()[0]
-    bot_identification_model.load_model(f'{target_dir}/rabbit_model.json')
-    # filename = 'rabbit_model.json'
-    # bot_identification_model = xgb.XGBClassifier()
-    # bot_identification_model.load_model(filename)
+    bot_identification_model = joblib.load(f'{target_dir}/{model_file}')
+    # bot_identification_model = joblib.load(model_file)
     
     return(bot_identification_model)
 
@@ -65,25 +73,24 @@ def compute_confidence(probability_value):
     '''
     args: probability_value (float) - the bot probability value given by the model
 
-    returns: prediction (str) - prediction of contribtuor type based on probability ('bot' or 'human') 
-             confidence (float) - confidence score of the prediction
+    returns: contributor_type (str) - type of contributor determined based on probability ('bot' or 'human') 
+             confidence (float) - confidence score of the determined type
 
-    description: based on the prediction probability that a contributor is a bot, make the prediction based on threshold
-                 and compute the confidence score on the prediction
+    description: based on the determined type probability that a contributor is a bot, determine the type of contributor based on threshold and compute the confidence score on type.
     '''
 
     if(probability_value <= 0.5):
-        prediction = 'human'
+        contributor_type = 'human'
     else:
-        prediction = 'bot'
+        contributor_type = 'bot'
     confidence = (abs(probability_value - 0.5)*2).round(3)
 
-    return(prediction,confidence)
+    return(contributor_type,confidence)
 
 def format_result(result, verbose):
     '''
     args: result (DataFrame) - DataFrame of result obtained through MakePrediction
-          verbose (bool) - If True, displays the features, #events and #activities that were used to make the prediction
+          verbose (bool) - If True, displays the features, #events and #activities that were used to determine the type
     
     returns: result (DataFrame) - formatted result as per verbose
 
@@ -91,25 +98,21 @@ def format_result(result, verbose):
     '''
 
     if verbose:
-        result = result[['events','activities',
-                        'NAT_mean','NT',
-                        'DCAT_median','NOR',
-                        'DCA_gini','NAR_mean',
-                        'prediction','confidence']]
+        result = result[ALL_FEATURES+['type','confidence']]
     else:
-        result = result[['prediction','confidence']]
+        result = result[['type','confidence']]
     
     return(result)
 
 def check_ratelimit(ratelimit, nextResetTime, max_queries):
     '''
-    args: ratelimit (int) - remaining ratelimit for the provided API key
-          nextResetTime (int) - time at which the API ratelimit will be reset
-          max_queries (int) - maximum number of queries per account
+    args: rate limit (int) - remaining rate limit for the provided API key
+          nextResetTime (int) - time at which the API rate limit will be reset
+          max_queries (int) - maximum number of queries per contributor
         
     returns: None
 
-    description: Get the time at which the API rate limit will be reset, calcualte its difference from 
+    description: Get the time at which the API rate limit will be reset, calculate its difference from 
                  current time + some time overhead and sleep for that much time.
     '''
     if ratelimit < max_queries:
@@ -146,7 +149,7 @@ def QueryUser(contributor, key, max_queries):
     args: contributor (str) - contributor name
           key (str) - the API key
     
-    returns: contributor_type (str) - type of the contribitor ("Bot" or "User")
+    returns: contributor_type (str) - type of the contributor ("Bot" or "User")
              query_failed (bool) - a boolean value to indicate if the query failed or success
     '''
 
@@ -156,8 +159,11 @@ def QueryUser(contributor, key, max_queries):
 
     try:
         query = f'{QUERY_ROOT}/users/{contributor}'
-        headers = {'Authorization': 'token ' + key}
-        response = requests.get(query, headers=headers)
+        if key:
+            headers = {'Authorization': 'token ' + key}
+            response = requests.get(query, headers=headers)
+        else:
+            response = requests.get(query)
 
         if response.ok:
             json_response = response.json()
@@ -188,7 +194,7 @@ def QueryEvents(contributor, key, page, max_queries):
     returns: list_events (list) - a list of events that were performed by contributor
              query_failed (bool) - a boolean value to indicate if the query failed or success
 
-    description: Query the GitHub Events API with 100 events per page, unpack the json format to get the requried fields and store it in list format
+    description: Query the GitHub Events API with 100 events per page, unpack the json format to get the required fields and store it in list format
     '''
 
     QUERY_ROOT = "https://api.github.com"
@@ -197,8 +203,11 @@ def QueryEvents(contributor, key, page, max_queries):
 
     try:
         query = f'{QUERY_ROOT}/users/{contributor}/events?per_page=100&page={page}'
-        headers = {'Authorization': 'token ' + key}
-        response = requests.get(query, headers=headers)
+        if key:
+            headers = {'Authorization': 'token ' + key}
+            response = requests.get(query, headers=headers)
+        else:
+            response = requests.get(query)
 
         if response.ok:
             json_response = response.json()
@@ -220,13 +229,14 @@ def QueryEvents(contributor, key, page, max_queries):
     
     return(list_event, query_failed)
 
-def MakePrediction(contributor, apikey, min_events, max_queries, verbose):
+def MakePrediction(contributor, apikey, min_events, min_confidence, max_queries, verbose):
     '''
-    args: contributor (str) - name of the contributor for whom the prediciton needs to be made
+    args: contributor (str) - name of the contributor for whom the type needs to be determined
           apikey (str) - the API key
-          min_events (int) - minimum number of events that a contributor should have performed to consider them for prediciton
+          min_events (int) - minimum number of events that a contributor should have performed to determine their type
+          min_confidence (float) - minimum confidence on contributor type to stop further querying
           max_queries (int) - maximum number of queries to be made to GitHub Events API
-          verbose (bool) - If True, displays the features, #events and #activities that were used to make the prediction
+          verbose (bool) - If True, displays the features, #events and #activities that were used to determine the type of contributor
     
     returns: activity_features (array) - an array of 7 features and the probability that the contributor is a bot
 
@@ -234,40 +244,38 @@ def MakePrediction(contributor, apikey, min_events, max_queries, verbose):
                  2) Identify the activities performed by the contributor through queried events
                  3) Compute activity features
                  4) Invoke the trained model
-                 5) Predict the proability that the contributor is a bot 
+                 5) Predict the probability that the contributor is a bot 
+                 6) Compute confidence from this probability
     '''
     
     page=1
     not_app = True
     df_events_obt = pd.DataFrame()
     activities = pd.DataFrame()
-    all_features = ['events','activities',
-                    'NAT_mean','NT',
-                    'DCAT_median','NOR',
-                    'DCA_gini','NAR_mean']
-    result_cols = all_features + ['prediction','confidence']
+    result_cols = ALL_FEATURES + ['type','confidence']
+    confidence = 0.0
 
     if('[bot]' in contributor):
         contributor_type, query_failed = QueryUser(contributor, apikey, max_queries)
         if(contributor_type == 'Bot'):
-            result = pd.DataFrame([[np.nan]*len(all_features) +['app',1.0]], 
+            result = pd.DataFrame([['-']*len(ALL_FEATURES) +['bot',1.0]], 
                                         columns=result_cols,
                                         index=[contributor])
             result = format_result(result, verbose)
             not_app = False
         
         elif(query_failed):
-            result = pd.DataFrame([[np.nan]*len(all_features) +['invalid',np.nan]], 
+            result = pd.DataFrame([['-']*len(ALL_FEATURES) +['invalid','-']], 
                                 columns=result_cols,
                                 index=[contributor])
             result = format_result(result, verbose)
             not_app = False
 
     if(not_app):
-        while(page <= max_queries):
+        while(page <= max_queries and (confidence != '-' and confidence <= min_confidence)):
             events, query_failed = QueryEvents(contributor, apikey, page, max_queries)
             if(len(events)>0):
-                df_events_obt = pd.concat([df_events_obt, pd.DataFrame.from_dict(events, orient = 'columns').assign(page=page)])
+                df_events_obt = pd.concat([df_events_obt, pd.DataFrame.from_dict(events, orient = 'columns')])
                 df_events_obt['created_at'] = pd.to_datetime(df_events_obt.created_at, errors='coerce', format='%Y-%m-%dT%H:%M:%SZ').dt.tz_localize(None)
                 # time_after = pd.to_datetime(time_after, errors='coerce', format='%Y-%m-%d %H:%M:%S').tz_localize(None)
                 
@@ -281,82 +289,90 @@ def MakePrediction(contributor, apikey, min_events, max_queries, verbose):
                 if(len(events) == 100):
                         page = page + 1
                 else:
-                    break
+                    page=max_queries+1 # loop breaking condition
             elif(query_failed):
-                result = pd.DataFrame([[np.nan]*len(all_features) +['invalid',np.nan]], 
+                result = pd.DataFrame([['-']*len(ALL_FEATURES) +['invalid','-']], 
                                     columns=result_cols,
                                     index=[contributor])
                 result = format_result(result, verbose)
                 
                 return(result)
             elif(page==1):
-                result = pd.DataFrame([[0,0]+[np.nan]*(len(all_features)-2)+['unknown',np.nan]], 
+                result = pd.DataFrame([[0,0]+['-']*(len(ALL_FEATURES)-2)+['unknown','-']], 
                                     columns=result_cols,
                                     index=[contributor])
                 result = format_result(result, verbose)
 
                 return(result)
             else:
-                break
-        if(df_events_obt.shape[0]>0):
-            activities = gat.activity_identification(df_events_obt)
-        
-        if(len(activities)>0):
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", category=RuntimeWarning)
-                activity_features = cfe.extract_features(activities)
-            activity_features = pd.DataFrame([activity_features], 
-                                                index=[contributor], 
-                                                columns=['NAT_mean',
-                                                        'NT',
-                                                        'DCAT_median',
-                                                        'NOR',
-                                                        'DCA_gini',
-                                                        'NAR_mean']
-                                            )
-            if(df_events_obt.shape[0]>=min_events):
-                model = get_model()
-                probability = model.predict_proba(activity_features)
-                prediction, confidence = compute_confidence(probability[0][1])
-            
-            else:
-                prediction = 'unknown'
-                confidence = np.nan
-
-            result = activity_features.assign(events = df_events_obt.shape[0],
-                                            activities = activities.shape[0],
-                                            prediction = prediction, 
-                                            confidence = confidence
-                                            )
-            result = format_result(result, verbose)
-
-            return(result)
-        else:
-            result = pd.DataFrame([[0,0]+[np.nan]*(len(all_features)-2)+['unknown',np.nan]], 
+                result = pd.DataFrame([[0,0]+['-']*(len(ALL_FEATURES)-2)+['unknown','-']], 
                                 columns=result_cols,
                                 index=[contributor])
+                result = format_result(result, verbose)
+                page=max_queries+1 # loop breaking condition
+                # break
+        
+            if(df_events_obt.shape[0]>0):
+                activities = gat.activity_identification(df_events_obt)
+            
+            if(len(activities)>0):
+                # with warnings.catch_warnings():
+                #     warnings.simplefilter("ignore", category=RuntimeWarning)
+                activity_features = (
+                    imf.extract_features(activities)
+                    .set_index([[contributor]])
+                )
+                    # activity_features=(
+                    #     pd.DataFrame(imf.extract_features(activities), 
+                    #                  index=[contributor], 
+                    #                  columns=ALL_FEATURES[2:]
+                    #     ))
+                # print(activity_features)
+                if(df_events_obt.shape[0]>=min_events):
+                    model = get_model()
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore", category=UserWarning)
+                        probability = model.predict_proba(activity_features)
+                    contributor_type, confidence = compute_confidence(probability[0][1])
+                
+                else:
+                    contributor_type = 'unknown'
+                    confidence = '-'
+                    # break
+
+                result = activity_features.assign(events = df_events_obt.shape[0],
+                                                activities = activities.shape[0],
+                                                type = contributor_type, 
+                                                confidence = confidence
+                                                )
+                # result = format_result(result, verbose)
+
+                # return(result)
+            else:
+                result = pd.DataFrame([[0,0]+['-']*(len(ALL_FEATURES)-2)+['unknown','-']], 
+                                    columns=result_cols,
+                                    index=[contributor])
             result = format_result(result, verbose)
         
     return(result)
 
-def get_results(contributors_name_file, contributor_name, apikey, min_events, max_queries, output_type, save_path, verbose, incremental):
+def get_results(contributors_name_file, contributor_name, apikey, min_events, min_confidence, max_queries, output_type, save_path, verbose, incremental):
     '''
-    args: contributors_name_file (str) - path to the text file containing contributors names for which the predicitons need to be made
-          contributor_name (str) - login name of GitHub account for which the type needs to be predicted
+    args: contributors_name_file (str) - path to the text file containing contributors names for which the type needs to be determined
+          contributor_name (str) - login name of GitHub contributor for which the type needs to be predicted
           apikey (str) - the API key
-          min_events (int) - minimum number of events that a contributor should have performed to consider them for prediciton
+          min_events (int) - minimum number of events that a contributor should have performed to determine their type.
+          min_confidence (float) - minimum confidence on type of contributor to stop further querying
           max_queries (int) - maximum number of queries to be made to GitHub Events API
-          verbose (bool) - if True, displays the features that were used to make the prediction
-          result (DataFrame) - DataFrame of prediction results
-          save_path (str) - the path along with file name and extension to save the prediction results
+          verbose (bool) - if True, displays the features that were used to determine the type of contributor
+          result (DataFrame) - DataFrame of results
+          save_path (str) - the path along with file name and extension to save the results
           output_type (str) - to convert the results to csv or json 
-          incremental (bool) - Update the output file/print on terminal once new predictions are made. If False, 
-                          results will be accessible only after the predicitons are made for all the contributors
+          incremental (bool) - Update the output file/print on terminal once the type is determined for new contributors. If False, results will be accessible only after the type is determined for all the contributors
     
     returns: None
 
-    description: Gets the prediciton results and either prints it on the terminal or write into a json/csv file 
-                 depending on the provided inputs
+    description: Gets the results and either prints it on the terminal or write into a json/csv file depending on the provided inputs
     '''
 
     contributors = []
@@ -366,8 +382,8 @@ def get_results(contributors_name_file, contributor_name, apikey, min_events, ma
         contributors.extend(pd.read_csv(contributors_name_file, sep=' ', header=None, index_col=0).index.to_list())
     all_results = pd.DataFrame()
     for contributor in tqdm(contributors):
-        prediction_result = MakePrediction(contributor, apikey, min_events, max_queries, verbose)
-        all_results = pd.concat([all_results, prediction_result])
+        contributor_type_result = MakePrediction(contributor, apikey, min_events, min_confidence, max_queries, verbose)
+        all_results = pd.concat([all_results, contributor_type_result])
         if incremental:
             save_results(all_results, output_type, save_path)
     
@@ -376,8 +392,8 @@ def get_results(contributors_name_file, contributor_name, apikey, min_events, ma
 
 def save_results(all_results, output_type, save_path):
     '''
-    args: all_results (DataFrame)- all the predictions and additional informations
-          save_path (str) - the path along with file name and extension to save the prediction results
+    args: all_results (DataFrame)- all the results (contributor name, type, confidence and so on) and additional information (features used to determine the type)
+          save_path (str) - the path along with file name and extension to save the results
           output_type (str) - to convert the results to csv or json
     
     returns: None
@@ -386,35 +402,47 @@ def save_results(all_results, output_type, save_path):
     '''
 
     if output_type == 'text':
-        print(all_results.reset_index(names=['account']).to_string(index=False))
+        print(all_results
+              .reset_index(names=['contributor'])
+              .to_string(index=False)
+              )
     elif(output_type == 'csv'):
-        all_results.reset_index(names=['account']).to_csv(save_path)
+        (all_results
+        .reset_index(names=['contributor'])
+        .to_csv(save_path)
+        )
     elif(output_type == 'json'):
-        all_results.reset_index(names=['account']).to_json(save_path, orient='records', indent=4)
+        (all_results
+         .reset_index(names=['contributor'])
+         .to_json(save_path, orient='records', indent=4)
+        )
     
 
 def arg_parser():
     parser = argparse.ArgumentParser(description='RABBIT is an Activity Based Bot Identification Tool that identifies bots based on their recent activities in GitHub')
-    parser.add_argument('account', action='store', type=str, default=None, nargs='*', 
-                        help='For predicting type of single account, the login name of the account should be provided to the tool.')
+    parser.add_argument('contributor', action='store', type=str, default=None, nargs='*', 
+                        help='For predicting type of single contributor, the login name of the contributor should be provided to the tool.')
     parser.add_argument('--input-file', type=str, default=None, required=False,
-                        help='For predicting type of multiple accounts, a .txt file with the login names (one name per line) of the accounts should be provided to the tool.')
+                        help='For predicting type of multiple contributors, a .txt file with the login names (one name per line) of the contributors should be provided to the tool.')
     # parser.add_argument(
     #     '--start-time', type=str, required=False,
-    #     default=None, help='Start time (format: yyyy-mm-dd HH:MM:SS) to be considered for anlysing the account\'s activity. \
+    #     default=None, help='Start time (format: yyyy-mm-dd HH:MM:SS) to be considered for analysing the contributor's activity. \
     #                         The default start-time is 91 days before the current time.')
     parser.add_argument(
         '--verbose', action="store_true", required=False, default=False,
-        help='Also report the values of the number of events, number of identified activities and features that were used to make the prediction. The default value is False.')
+        help='Also report the values of the number of events, number of identified activities and features that were used to determine the type of contributor. The default value is False.')
     parser.add_argument(
         '--min-events', metavar='MIN_EVENTS', type=int, required=False, default=5,
-        help='Minimum number of events that are required to make a prediction. The default minimum number of events is 5.')
+        help='Minimum number of events that are required to determine the type of contributor. The default minimum number of events is 5.')
+    parser.add_argument(
+        '--min-confidence', metavar='MIN_CONFIDENCE', type=float, required=False, default=1.0,
+        help='Minimum confidence threshold on determined contributor type to stop further querying. The default minimum confidence is 1.0.')
     parser.add_argument(
         '--max-queries', metavar='MAXQUERIES', type=int, required=False, default=3, choices=[1,2,3],
-        help='Maximum number of queries to be made to the GitHub Events API for each account. The default number of queries is 3, allowed values are 1, 2 or 3.')
+        help='Maximum number of queries to be made to the GitHub Events API for each contributor. The default number of queries is 3, allowed values are 1, 2 or 3.')
     parser.add_argument(
-        '--key', metavar='APIKEY', required=True, type=str, default='',
-        help='GitHub API key to extract events from GitHub Events API')
+        '--key', metavar='APIKEY', required=False, type=str, default='',
+        help='GitHub API key to extract events from GitHub Events API. API key is required if the number of API queries exceed 15 per hour.')
     parser.add_argument(
         '--csv', metavar='FILE_NAME.csv', required=False, type=str, default='',
         help='Saves the result in comma-separated values (csv) format.')
@@ -434,7 +462,7 @@ def cli():
 
     returns: None
 
-    description: parse the args paramters in to tool parameters and pass it to the MakePredictions function
+    description: parse the args parameters in to tool parameters and pass it to the MakePredictions function
     '''
 
     args = arg_parser()
@@ -445,19 +473,25 @@ def cli():
     #     time_after = datetime.strftime(datetime.now()+relativedelta(days=-91), '%Y-%m-%d %H:%M:%S')
 
     if args.key == '' or len(args.key) < 40:
-        sys.exit('A valid GitHub personal access token is required to start the process. \
+        warnings.warn('A valid GitHub personal access token is required if more than 15 queries are required to be made per hour. \
 Please read more about it in the repository readme file.')
+        apikey = None
     else:
         apikey = args.key
     
-    if args.input_file is None and len(args.account) == 0:
-        sys.exit('The login name of an acount or a .txt file containing login names for accounts should be \
-provided to the tool. Please read more about it in the respository readme file.')
+    if args.input_file is None and len(args.contributor) == 0:
+        sys.exit('The login name of a contributor or a .txt file containing login names for contributors should be \
+provided to the tool. Please read more about it in the repository readme file.')
     
     if args.min_events < 1 or args.min_events > 300:
-        sys.exit('Minimum number of events to make a prediction should be between 1 and 300 including both')
+        sys.exit('Minimum number of events to determine the contributor type should be between 1 and 300 including both.')
     else:
         min_events = args.min_events
+    
+    if args.min_confidence <0.0 or args.min_confidence > 1.0:
+        sys.exit('Minimum confidence on determined contributor type to stop further querying should be between 0.0 and 1.0 including both.')
+    else:
+        min_confidence = args.min_confidence
 
     if args.csv != '':
         output_type = 'csv'
@@ -470,9 +504,10 @@ provided to the tool. Please read more about it in the respository readme file.'
         save_path = ''
 
     get_results(args.input_file,
-                args.account,
+                args.contributor,
                 apikey, 
                 min_events, 
+                min_confidence,
                 args.max_queries, 
                 # time_after, 
                 output_type,
