@@ -1,3 +1,4 @@
+[![](https://img.shields.io/github/v/release/natarajan-chidambaram/RABBIT?label=Latest%20Release)](https://github.com/natarajan-chidambaram/RABBIT/releases/latest)
 [![SWH](https://archive.softwareheritage.org/badge/origin/https://github.com/natarajan-chidambaram/RABBIT/)](https://archive.softwareheritage.org/browse/origin/?origin_url=https://github.com/natarajan-chidambaram/RABBIT)
 
 # RABBIT
