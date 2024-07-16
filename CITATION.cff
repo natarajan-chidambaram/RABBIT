@@ -1,0 +1,45 @@
+cff-version: 1.2.0
+title: RABBIT
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Natarajan
+    family-names: Chidambaram
+    email: natarajan.chidambaram@umons.ac.be
+    orcid: 'https://orcid.org/0000-0002-2295-8928'
+    affiliation: UMons
+  - given-names: Tom
+    family-names: Mens
+    email: tom.mens@umons.ac.be
+    affiliation: UMons
+    orcid: 'https://orcid.org/0000-0003-3636-5020'
+  - given-names: Alexandre
+    family-names: Decan
+    email: alexandre.decan@umons.ac.be
+    orcid: 'https://orcid.org/0000-0002-5824-5823'
+    affiliation: UMons
+identifiers:
+  - type: doi
+    value: 10.1145/3643991.3644877
+    description: >-
+      RABBIT: A tool for identifying bot accounts based on
+      their recent GitHub event history
+  - type: swh
+    value: 'swh:1:dir:42a3619b53e990a1df7624865b46edbd6366f3c2'
+    description: >-
+      RABBIT: A tool for identifying bot accounts based on
+      their recent GitHub event history
+repository-code: 'https://github.com/natarajan-chidambaram/RABBIT'
+abstract: >-
+  RABBIT is a recursive acronym for "RABBIT is an
+  Activity-Based Bot Identification Tool". It is based on
+  BIMBAS (stands for Bot Identification Model Based on
+  Activity Sequences), a binary classification model to
+  identify bot contributors based on their recent activities
+  in GitHub.
+keywords:
+  - bot
+  - classification
+license: Apache-2.0
