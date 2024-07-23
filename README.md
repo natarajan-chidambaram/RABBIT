@@ -51,7 +51,7 @@ deactivate
 ```
 To install RABBIT, execute the following command:
 ```
-pip install git+https://github.com/natarajan-chidambaram/RABBIT
+pip install git+https://github.com/natarajan-chidambaram/RABBIT@dev2.0.1
 ```
 
 Alternatively, `RABBIT` is available via [Nix](https://search.nixos.org/packages?channel=unstable&show=rabbit&from=0&size=50&sort=relevance&type=packages&query=rabbit).
