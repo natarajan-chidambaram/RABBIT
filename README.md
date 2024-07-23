@@ -3,7 +3,7 @@
 
 # RABBIT
 
-![alt text](https://github.com/natarajan-chidambaram/rabbit/blob/dev2/logo.jpeg?raw=true)
+![alt text](https://github.com/natarajan-chidambaram/rabbit/blob/dev2.0.1/logo.jpeg?raw=true)
 
 RABBIT is a recursive acronym for "RABBIT is an Activity-Based Bot Identification Tool".
 It is based on BIMBAS (stands for Bot Identification Model Based on Activity Sequences), a binary classification model to identify bot contributors based on their recent activities in GitHub.
