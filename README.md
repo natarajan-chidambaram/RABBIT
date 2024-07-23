@@ -17,7 +17,8 @@ This tool is developed as part of the research article titled: "A Bot Identifica
 ## How it works
 RABBIT accepts a GitHub contributor name (login name) and/or a text file of multiple login names (one name per line). It requires a GitHub API key if more than 15 queries are required to be made per hour.
 First, the tool checks whether the login name corresponds to a valid existing GitHub contributor and returns **invalid** otherwise. If the login name
-corresponds to a GitHub App (based on the login name ending with [bot] and the Bot type returned by a call to the GitHub Users API), the tool directly determines the type as **bot** without even querying their events.
+corresponds to a GitHub App (based on the Bot type returned by a call to the GitHub Users API), the tool directly determines the type as **bot** without even querying their events.
+Similarly, if the login name corresponds to an organisation account (based on the Organization type returned by a call to the GitHub Users API), the tool directly determines the type as **organisation** without even querying their events.
 For the remaining login names, BIMBAS will determine the type of contributor as **bot**, **human** or **unknown** after the following steps.
 The first step consists of extracting the latest public events performed by the contributor in GitHub, using one or more queries to the GitHub Events API.
 If the number of events retrieved is less than the required threshold the prediction will be **unknown** due to a lack of data.
@@ -89,6 +90,7 @@ _The default minimum confidence is 1.0_
 `--max-queries <NUM_QUERIES>` 		**Maximum number of queries that will be made to the GitHub Events API for each contributor.**
 > Example: $ rabbit --input-file logins.txt --queries 2
 
+
 _The default number of queries is 3, allowed values are 1, 2 or 3._
 
 `--verbose`              		**Report the #events, #activities and values of the features that were used to determine the type of contributor.**
@@ -123,6 +125,15 @@ $ rabbit natarajan-chidambaram tensorflow-jenkins "github-actions[bot]"
     natarajan-chidambaram           human          0.984 
        tensorflow-jenkins             bot          0.878
       github-actions[bot]             bot            1.0
+```
+
+**With GitHub Organisation accounts**
+```
+$ rabbit natarajan-chidambaram tensorflow-jenkins "github-actions[bot]"
+              contributor            type     confidence
+    natarajan-chidambaram           human          0.984 
+       tensorflow-jenkins             bot          0.878
+               observerly    organisation            1.0
 ```
 
 **With --input-file**
@@ -187,7 +198,8 @@ $ rabbit --input-file logins.txt --verbose
               contributor      events      activities      NA      NT      NOR   ...   NAT_std      NAT_gini      NAT_IQR            type      confidence
        tensorflow-jenkins         160            160      160       4        2   ...    17.093         0.541       15.503             bot           0.878
            johnpbloch-bot         300            300      300       3        1   ...    23.452         0.724       21.451             bot           0.796
-      github-actions[bot]         NaN              -        -       -        -   ...         -             -            -             bot             1.0
+      github-actions[bot]           -              -        -       -        -   ...         -             -            -             bot             1.0
+                oberverly           -              -        -       -        -   ...         -             -            -    organisation             1.0  
     natarajan-chidambaram          74             74       74       5        1   ...    14.834         0.924       12.113           human           0.984
 ```
 

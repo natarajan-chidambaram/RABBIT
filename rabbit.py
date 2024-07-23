@@ -250,28 +250,34 @@ def MakePrediction(contributor, apikey, min_events, min_confidence, max_queries,
     
     page=1
     not_app = True
+    not_org = True
     df_events_obt = pd.DataFrame()
     activities = pd.DataFrame()
     result_cols = ALL_FEATURES + ['type','confidence']
     confidence = 0.0
 
-    if('[bot]' in contributor):
-        contributor_type, query_failed = QueryUser(contributor, apikey, max_queries)
-        if(contributor_type == 'Bot'):
-            result = pd.DataFrame([['-']*len(ALL_FEATURES) +['bot',1.0]], 
-                                        columns=result_cols,
-                                        index=[contributor])
-            result = format_result(result, verbose)
-            not_app = False
-        
-        elif(query_failed):
-            result = pd.DataFrame([['-']*len(ALL_FEATURES) +['invalid','-']], 
-                                columns=result_cols,
-                                index=[contributor])
-            result = format_result(result, verbose)
-            not_app = False
+    contributor_type, query_failed = QueryUser(contributor, apikey, max_queries)
+    if(contributor_type == 'Bot'):
+        result = pd.DataFrame([['-']*len(ALL_FEATURES) +['bot',1.0]], 
+                                    columns=result_cols,
+                                    index=[contributor])
+        result = format_result(result, verbose)
+        not_app = False
+    elif(contributor_type == 'Organization'):
+        result = pd.DataFrame([['-']*len(ALL_FEATURES) +['organisation',1.0]], 
+                                    columns=result_cols,
+                                    index=[contributor])
+        result = format_result(result, verbose)
+        not_org = False
+    
+    elif(query_failed):
+        result = pd.DataFrame([['-']*len(ALL_FEATURES) +['invalid','-']], 
+                            columns=result_cols,
+                            index=[contributor])
+        result = format_result(result, verbose)
+        not_app = False
 
-    if(not_app):
+    if(not_app and not_org):
         while(page <= max_queries and (confidence != '-' and confidence <= min_confidence)):
             events, query_failed = QueryEvents(contributor, apikey, page, max_queries)
             if(len(events)>0):
