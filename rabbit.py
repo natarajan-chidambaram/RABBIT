@@ -87,6 +87,31 @@ def compute_confidence(probability_value):
 
     return(contributor_type,confidence)
 
+def frame_direct_result(determined_type, confidence, result_cols, contributor):
+    '''
+    args: determined_type (str) - type determined by GitHub Users API or Unknown or Invalid
+          confidence (str/int) - confidence on determined type, int value for type provided by GitHub Users API, str for others
+          result_cols (list) - columns that needs to be present in the result
+          contributor (str) - contributor name that is being processed at the moment
+    
+    returns: result (DataFrame) - DataFrame containing the type of contributor, confidence in determining that type and the corresponding feature values
+
+    description: Frame the result with required columns and corresponding feature values for the contributors whose type is directly determined 
+                 through GitHub Users API, or did not perform enough events or does not exist on GitHub. This function creates the result for
+                 which BIMBAS will not be executed.
+    '''
+    
+    if(determined_type == "Unknown"):
+        result = pd.DataFrame([[determined_type,confidence]+[0]+['-']*(len(ALL_FEATURES)-1)], 
+                              columns=result_cols,
+                              index=[contributor])
+    else:
+        result = pd.DataFrame([[determined_type,confidence]+['-']*(len(ALL_FEATURES))], 
+                              columns=result_cols,
+                              index=[contributor])
+    
+    return(result)
+
 def format_result(result, verbose):
     '''
     args: result (DataFrame) - DataFrame of result obtained through MakePrediction
@@ -94,7 +119,9 @@ def format_result(result, verbose):
     
     returns: result (DataFrame) - formatted result as per verbose
 
-    description: The result that will be printed or saved will universally be formatted here as per the input value of verbose.
+    description: The result that will be printed directly to the terminal or saved in csv or json will universally be 
+                 formatted here. Depending on the value of verbose, the final result will contain just the prediction 
+                 and confidence of each contributor or will have all the features that led to the prediction.
     '''
 
     if verbose:
@@ -251,14 +278,12 @@ def MakePrediction(contributor, apikey, min_events, min_confidence, max_queries,
     page=1
     df_events_obt = pd.DataFrame()
     activities = pd.DataFrame()
-    result_cols = ALL_FEATURES + ['type','confidence']
+    result_cols = ['type','confidence']+ALL_FEATURES
     confidence = 0.0
 
     contributor_type, query_failed = QueryUser(contributor, apikey, max_queries)
     if(contributor_type != 'User' and query_failed==False):
-        result = pd.DataFrame([['-']*len(ALL_FEATURES) +[contributor_type,1.0]], 
-                                    columns=result_cols,
-                                    index=[contributor])
+        result = frame_direct_result(contributor_type, 1.0, result_cols, contributor)
         result = format_result(result, verbose)
     elif(contributor_type == "User"):
         while(page <= max_queries and (confidence != '-' and confidence <= min_confidence)):
@@ -280,23 +305,17 @@ def MakePrediction(contributor, apikey, min_events, min_confidence, max_queries,
                 else:
                     page=max_queries+1 # loop breaking condition
             elif(query_failed):
-                result = pd.DataFrame([['-']*len(ALL_FEATURES) +['Invalid','-']], 
-                                    columns=result_cols,
-                                    index=[contributor])
+                result = frame_direct_result('Invalid', '-', result_cols, contributor)
                 result = format_result(result, verbose)
                 
                 return(result)
             elif(page==1):
-                result = pd.DataFrame([[0,0]+['-']*(len(ALL_FEATURES)-2)+['Unknown','-']], 
-                                    columns=result_cols,
-                                    index=[contributor])
+                result = frame_direct_result('Unknown', '-', result_cols, contributor)
                 result = format_result(result, verbose)
 
                 return(result)
             else:
-                result = pd.DataFrame([[0,0]+['-']*(len(ALL_FEATURES)-2)+['Unknown','-']], 
-                                columns=result_cols,
-                                index=[contributor])
+                result = frame_direct_result('Unknown', '-', result_cols, contributor)
                 result = format_result(result, verbose)
                 page=max_queries+1 # loop breaking condition
                 # break
@@ -311,12 +330,6 @@ def MakePrediction(contributor, apikey, min_events, min_confidence, max_queries,
                     imf.extract_features(activities)
                     .set_index([[contributor]])
                 )
-                    # activity_features=(
-                    #     pd.DataFrame(imf.extract_features(activities), 
-                    #                  index=[contributor], 
-                    #                  columns=ALL_FEATURES[2:]
-                    #     ))
-                # print(activity_features)
                 if(df_events_obt.shape[0]>=min_events):
                     model = get_model()
                     with warnings.catch_warnings():
@@ -329,24 +342,17 @@ def MakePrediction(contributor, apikey, min_events, min_confidence, max_queries,
                     confidence = '-'
                     # break
 
-                result = activity_features.assign(events = df_events_obt.shape[0],
-                                                activities = activities.shape[0],
-                                                type = contributor_type, 
-                                                confidence = confidence
+                result = activity_features.assign(type = contributor_type,
+                                                confidence = confidence,
+                                                events = df_events_obt.shape[0],
+                                                activities = activities.shape[0]
                                                 )
-                # result = format_result(result, verbose)
-
-                # return(result)
             else:
-                result = pd.DataFrame([[0,0]+['-']*(len(ALL_FEATURES)-2)+['Unknown','-']], 
-                                    columns=result_cols,
-                                    index=[contributor])
+                result = frame_direct_result('Unknown', result_cols, contributor)
             result = format_result(result, verbose)
     
     elif(query_failed):
-        result = pd.DataFrame([['-']*len(ALL_FEATURES) +['Invalid','-']], 
-                            columns=result_cols,
-                            index=[contributor])
+        result = frame_direct_result('Invalid', '-', result_cols, contributor)
         result = format_result(result, verbose)
         
     return(result)
