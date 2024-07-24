@@ -21,7 +21,7 @@ from dateutil.relativedelta import relativedelta
 TIMEOUT_WAITING_TIME = 30
 CONNECTION_ERROR_WAITING_TIME = 10
 QUERY_LIMIT_RESET_OVERHEAD_TIME = 120
-ALL_FEATURES = ['events','activities', 'NA','NT','NOR','ORR',
+ALL_FEATURES = ['events', 'NA','NT','NOR','ORR',
                 'DCA_mean','DCA_median','DCA_std','DCA_gini',
                 'NAR_mean','NAR_median','NAR_gini','NAR_IQR',
                 'NTR_mean','NTR_median','NTR_std','NTR_gini',
@@ -80,9 +80,9 @@ def compute_confidence(probability_value):
     '''
 
     if(probability_value <= 0.5):
-        contributor_type = 'human'
+        contributor_type = 'Human'
     else:
-        contributor_type = 'bot'
+        contributor_type = 'Bot'
     confidence = (abs(probability_value - 0.5)*2).round(3)
 
     return(contributor_type,confidence)
@@ -98,7 +98,7 @@ def format_result(result, verbose):
     '''
 
     if verbose:
-        result = result[ALL_FEATURES+['type','confidence']]
+        result = result[['type','confidence']+ALL_FEATURES]
     else:
         result = result[['type','confidence']]
     
@@ -155,7 +155,7 @@ def QueryUser(contributor, key, max_queries):
 
     QUERY_ROOT = "https://api.github.com"
     query_failed = False
-    contributor_type = 'unknown'
+    contributor_type = None
 
     try:
         query = f'{QUERY_ROOT}/users/{contributor}'
@@ -249,35 +249,18 @@ def MakePrediction(contributor, apikey, min_events, min_confidence, max_queries,
     '''
     
     page=1
-    not_app = True
-    not_org = True
     df_events_obt = pd.DataFrame()
     activities = pd.DataFrame()
     result_cols = ALL_FEATURES + ['type','confidence']
     confidence = 0.0
 
     contributor_type, query_failed = QueryUser(contributor, apikey, max_queries)
-    if(contributor_type == 'Bot'):
-        result = pd.DataFrame([['-']*len(ALL_FEATURES) +['bot',1.0]], 
+    if(contributor_type != 'User' and query_failed==False):
+        result = pd.DataFrame([['-']*len(ALL_FEATURES) +[contributor_type,1.0]], 
                                     columns=result_cols,
                                     index=[contributor])
         result = format_result(result, verbose)
-        not_app = False
-    elif(contributor_type == 'Organization'):
-        result = pd.DataFrame([['-']*len(ALL_FEATURES) +['organisation',1.0]], 
-                                    columns=result_cols,
-                                    index=[contributor])
-        result = format_result(result, verbose)
-        not_org = False
-    
-    elif(query_failed):
-        result = pd.DataFrame([['-']*len(ALL_FEATURES) +['invalid','-']], 
-                            columns=result_cols,
-                            index=[contributor])
-        result = format_result(result, verbose)
-        not_app = False
-
-    if(not_app and not_org):
+    elif(contributor_type == "User"):
         while(page <= max_queries and (confidence != '-' and confidence <= min_confidence)):
             events, query_failed = QueryEvents(contributor, apikey, page, max_queries)
             if(len(events)>0):
@@ -297,21 +280,21 @@ def MakePrediction(contributor, apikey, min_events, min_confidence, max_queries,
                 else:
                     page=max_queries+1 # loop breaking condition
             elif(query_failed):
-                result = pd.DataFrame([['-']*len(ALL_FEATURES) +['invalid','-']], 
+                result = pd.DataFrame([['-']*len(ALL_FEATURES) +['Invalid','-']], 
                                     columns=result_cols,
                                     index=[contributor])
                 result = format_result(result, verbose)
                 
                 return(result)
             elif(page==1):
-                result = pd.DataFrame([[0,0]+['-']*(len(ALL_FEATURES)-2)+['unknown','-']], 
+                result = pd.DataFrame([[0,0]+['-']*(len(ALL_FEATURES)-2)+['Unknown','-']], 
                                     columns=result_cols,
                                     index=[contributor])
                 result = format_result(result, verbose)
 
                 return(result)
             else:
-                result = pd.DataFrame([[0,0]+['-']*(len(ALL_FEATURES)-2)+['unknown','-']], 
+                result = pd.DataFrame([[0,0]+['-']*(len(ALL_FEATURES)-2)+['Unknown','-']], 
                                 columns=result_cols,
                                 index=[contributor])
                 result = format_result(result, verbose)
@@ -342,7 +325,7 @@ def MakePrediction(contributor, apikey, min_events, min_confidence, max_queries,
                     contributor_type, confidence = compute_confidence(probability[0][1])
                 
                 else:
-                    contributor_type = 'unknown'
+                    contributor_type = 'Unknown'
                     confidence = '-'
                     # break
 
@@ -355,10 +338,16 @@ def MakePrediction(contributor, apikey, min_events, min_confidence, max_queries,
 
                 # return(result)
             else:
-                result = pd.DataFrame([[0,0]+['-']*(len(ALL_FEATURES)-2)+['unknown','-']], 
+                result = pd.DataFrame([[0,0]+['-']*(len(ALL_FEATURES)-2)+['Unknown','-']], 
                                     columns=result_cols,
                                     index=[contributor])
             result = format_result(result, verbose)
+    
+    elif(query_failed):
+        result = pd.DataFrame([['-']*len(ALL_FEATURES) +['Invalid','-']], 
+                            columns=result_cols,
+                            index=[contributor])
+        result = format_result(result, verbose)
         
     return(result)
 
