@@ -155,7 +155,7 @@ $ rabbit --input-file logins.txt --key token
 ```
 $ rabbit natarajan-chidambaram --input-file logins.txt
               contributor            type     confidence
-    natarajan-chidambaram           human          0.984 
+    natarajan-chidambaram           Human          0.984 
        tensorflow-jenkins             Bot          0.878
            johnpbloch-bot             Bot          0.796
       github-actions[bot]             Bot            1.0
