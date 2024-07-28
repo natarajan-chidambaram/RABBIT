@@ -1,6 +1,52 @@
 [build-system]
-requires = [
-  "setuptools >= 70.0.0",
-  "wheel",
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "RABBIT"
+description = "RABBIT - Rabbit is an Activity Based Bot Identification Tool to detect bot contributors in GitHub repositories based on their recent activity sequences"
+version = "0.0.0"
+authors = ["Natarajan Chidambaram"]
+readme = "README.md"
+license = "Apache-2.0"
+keywords = [
+  "bot-detection",
+  "activity-based",
+  "github",
+  "bot-identification",
+  "github contributor activity",
 ]
-build-backend = "setuptools.build_meta"
+repository = "https://github.com/natarajan-chidambaram/RABBIT"
+classifiers = [
+  "Development Status :: 1 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Education",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+  "License :: OSI Approved :: Apache License 2.0",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+]
+include = ["rabbit/bimbas.joblib"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pandas = "^2.2.2"
+numpy = "^2.0.1"
+requests = "^2.32.3"
+python-dateutil = "^2.9.0.post0"
+scikit-learn = "^1.5.1"
+scipy = "^1.14.0"
+tqdm = "^4.66.4"
+xgboost = "^2.1.0"
+joblib = "^1.4.2"
+poetry-dynamic-versioning = { extras = ["plugin"], version = "^1.4.0" }
+fire = "^0.6.0"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+
+[tool.poetry.scripts]
+rabbit = "rabbit.main:runCli"
