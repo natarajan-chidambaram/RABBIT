@@ -73,10 +73,10 @@ def compute_confidence(probability_value):
     '''
     args: probability_value (float) - the bot probability value given by the model
 
-    returns: contributor_type (str) - type of contributor determined based on probability ('bot' or 'human') 
-             confidence (float) - confidence score of the determined type
+    returns: contributor_type (str) - type of contributor determined based on probability ('Bot' or 'Human') 
+             confidence (float) - confidence score of the determined type (value between 0.0 and 1.0)
 
-    description: based on the determined type probability that a contributor is a bot, determine the type of contributor based on threshold and compute the confidence score on type.
+    description: Based on the determined type probability that a contributor is a bot, determine the type of contributor based on threshold and compute the confidence score on type.
     '''
 
     if(probability_value <= 0.5):
@@ -176,7 +176,7 @@ def QueryUser(contributor, key, max_queries):
     args: contributor (str) - contributor name
           key (str) - the API key
     
-    returns: contributor_type (str) - type of the contributor ("Bot" or "User")
+    returns: contributor_type (str) - type of the contributor (e.g., "Bot", "User", "Organization")
              query_failed (bool) - a boolean value to indicate if the query failed or success
     '''
 
@@ -283,9 +283,11 @@ def MakePrediction(contributor, apikey, min_events, min_confidence, max_queries,
 
     contributor_type, query_failed = QueryUser(contributor, apikey, max_queries)
     if(contributor_type != 'User' and query_failed==False):
+        # We only need to distinguish bots from humans if the contributor_type is 'User'.
+        # In all other cases we just report the type retrieved from the API with 1.0 confidence.
         result = frame_direct_result(contributor_type, 1.0, result_cols, contributor)
         result = format_result(result, verbose)
-    elif(contributor_type == "User"):
+    elif(contributor_type == 'User'):
         while(page <= max_queries and (confidence != '-' and confidence <= min_confidence)):
             events, query_failed = QueryEvents(contributor, apikey, page, max_queries)
             if(len(events)>0):
