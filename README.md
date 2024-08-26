@@ -80,26 +80,26 @@ _You can obtain an access token as described earlier_
 
 _The default minimum number of events is 5._
 
-`--min-confidence <MIN_CONFIDENCE>` 		**Minimum confidence on contributor type to stop further querying.**
+`--max-queries <NUM_QUERIES>` 		**Maximum number of queries that will be made to the GitHub Events API for each contributor. Reducing this value will lead to faster execution and less queries, at the expense of a reduced confidence in the results.**
+> Example: $ rabbit --input-file logins.txt --queries 2
+
+_The default number of queries is 3, allowed values are 1, 2 or 3._
+
+`--min-confidence <MIN_CONFIDENCE>` 		**Minimum confidence on contributor type to stop further querying. If the desired minimum confidence is reached, no further API calls will be made for the given contributor.**
 > Example: $ rabbit --input-file logins.txt --min-confidence 0.5
 
 _The default minimum confidence is 1.0_
 
-`--max-queries <NUM_QUERIES>` 		**Maximum number of queries that will be made to the GitHub Events API for each contributor.**
-> Example: $ rabbit --input-file logins.txt --queries 2
-
-
-_The default number of queries is 3, allowed values are 1, 2 or 3._
-
-`--verbose`              		**Report the #events, #activities and values of the features that were used to determine the type of contributor.**
+`--verbose`              		**Reports detailed information from the classification model such as the number of events, number of activities and values of the features that were used to determine the type of contributor.**
 > Example: $ rabbit --input-file logins.txt --verbose
 
 _The default value is False._
 
-`--json <FILE_NAME.json>`                	**Saves the result in json format.**
+`--json <FILE_NAME.json>`                	**Saves the result in JSON format.**
 > Example: $ rabbit --input-file logins.txt --json output.json
 
-`--csv <FILE_NAME.csv>`                		**Saves the result in comma-separated values (csv) format.**
+`--csv <FILE_NAME.csv>`                		**Saves the result in comma-separated values (CSV) format.**
+> Example: $ rabbit --input-file logins.txt --csv types.csv
 
 `--incremental`              		**Method of reporting the results.** _If provided, the result for the contributor will be reported as soon as its type is determined. If not provided, the results will be reported after determining the type of all provided contributors._
 > Example: $ rabbit --input-file logins.txt --key token --incremental
@@ -108,7 +108,9 @@ _The default value is False._
 
 ## Examples of RABBIT output (for illustration purposes only)
 
-**With positional arguments**
+**With positional arguments:**
+
+GitHub 'User' accounts are classified as either Human or Bot using the classification model, and a confidence score between 0.0 and 1.0 is computed.
 ```
 $ rabbit natarajan-chidambaram tensorflow-jenkins
               contributor            type     confidence
@@ -116,7 +118,7 @@ $ rabbit natarajan-chidambaram tensorflow-jenkins
        tensorflow-jenkins             Bot          0.878
 ```
 
-**With GitHub Apps** (Note: Apps should have `[bot]' at the end of their name and should be given within quotes)
+GitHub Apps interact and perform activities through a 'Bot' actor, which can be recognised in the contributor name by the `[bot]' suffix. They can be reported as Bot with 1.0 confidence based on their 'Bot' type in the GitHub Users API endpoint. (Because of the square brackets in the contributor name it needs to be surrounded by quotes.)
 ```
 $ rabbit natarajan-chidambaram tensorflow-jenkins "github-actions[bot]"
               contributor            type     confidence
@@ -125,15 +127,15 @@ $ rabbit natarajan-chidambaram tensorflow-jenkins "github-actions[bot]"
       github-actions[bot]             Bot            1.0
 ```
 
-**With GitHub Organisation accounts**
+GitHub organization accounts are immediately retrieved with 1.0 confidence based on their 'Organization' type that can be retrieved from the GitHub Users API endpoint.
 ```
 $ rabbit tensorflow-jenkins observerly
               contributor            type     confidence
        tensorflow-jenkins             Bot          0.878
-               observerly    Organisation            1.0
+               observerly    Organization            1.0
 ```
 
-**With --input-file**
+**With --input-file:** (Instead of providing each contributor name as a positional arguments, one can use an input text file containing all contributor names, one per line.)
 ```
 $ rabbit --input-file logins.txt
               contributor            type     confidence
@@ -142,16 +144,7 @@ $ rabbit --input-file logins.txt
       github-actions[bot]             Bot            1.0
 ```
 
-**With --key**
-```
-$ rabbit --input-file logins.txt --key token
-              contributor            type     confidence
-       tensorflow-jenkins             Bot          0.878
-           johnpbloch-bot             Bot          0.996
-      github-actions[bot]             Bot            1.0
-```
-
-**With combined use of positional arguments and --input-file**
+**With combined use of positional arguments and --input-file:**
 ```
 $ rabbit natarajan-chidambaram --input-file logins.txt
               contributor            type     confidence
@@ -161,35 +154,8 @@ $ rabbit natarajan-chidambaram --input-file logins.txt
       github-actions[bot]             Bot            1.0
 ```
 
-**With --min-events**
-```
-$ rabbit --input-file logins.txt --min-events 10
-              contributor            type      confidence
-       tensorflow-jenkins             Bot           0.878
-           johnpbloch-bot             Bot           0.796
-      github-actions[bot]             Bot             1.0
-```
+**With --verbose:** (Verbose provides detailed information used by the classficiation model, such as the number ofevents, number of activities NA, and values of the features that were used to determine the type of contributor. Details of these features can be found in the accompanying research publication.)
 
-**With --min-confidence**
-```
-$ rabbit --input-file logins.txt --min-confidence 0.5
-              contributor            type      confidence
-       tensorflow-jenkins             Bot           0.832
-           johnpbloch-bot             Bot           0.659
-      github-actions[bot]             Bot             1.0
-```
-
-**With --max-queries**
-```
-$ rabbit --input-file logins.txt --max-queries 1
-              contributor            type      confidence
-       tensorflow-jenkins             Bot           0.832
-           johnpbloch-bot             Bot           0.796
-      github-actions[bot]             Bot            1.0
-    natarajan-chidambaram           Human           0.984
-```
-
-**With --verbose**
 ```
 $ rabbit --input-file logins.txt --verbose
               contributor           type      confidence     events    NA      NT      NOR   ...   NAT_std      NAT_gini      NAT_IQR            
@@ -198,20 +164,6 @@ $ rabbit --input-file logins.txt --verbose
       github-actions[bot]            Bot             1.0         -      -       -        -   ...         -             -            -             
                 oberverly   Organization             1.0         -      -       -        -   ...         -             -            -      
     natarajan-chidambaram          Human           0.984        74     74       5        1   ...    14.834         0.924       12.113           
-```
-
-**With --csv or --json**
-```
-$ rabbit --input-file logins.txt --csv types.csv
-```
-
-```
-$ rabbit --input-file logins.txt --json types.json
-```
-
-**With --incremental**
-```
-$ rabbit --input-file logins.txt --incremental
 ```
 
 ## License
