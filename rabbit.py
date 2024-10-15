@@ -144,7 +144,7 @@ def check_ratelimit(ratelimit, nextResetTime, max_queries):
     '''
     if ratelimit < max_queries:
         pause, ResetTime = time_to_pause(nextResetTime)
-        print("Remaining API query limit is {0}. Querying paused until next reset time: {1}".format(ratelimit, ResetTime))
+        print("Remaining API query limit is {0}. Querying paused for {1}s until next reset time: {2}".format(ratelimit, pause, ResetTime))
         time.sleep(pause)
 
 def timeout_exception():
