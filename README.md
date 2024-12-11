@@ -12,7 +12,7 @@ RABBIT is quite efficient, being able to predict thousands of accounts per hour,
 The tool has been developed by Natarajan Chidambaram, a researcher at the [Software Engineering Lab](http://informatique.umons.ac.be/genlog/) of the [University of Mons](https://www.umons.ac.be) (Belgium) as part of his PhD research in the context of [DigitalWallonia4.AI research project ARIAC (grant number 2010235)](https://www.digitalwallonia.be/ia/) and [TRAIL](https://trail.ac/en/). 
 
 This tool is developed as part of the research article titled: "A Bot Identification Model and Tool based on GitHub Activity Sequences" that is published at the Journal of Systems and Software, see [https://doi.org/10.1016/j.jss.2024.112287](https://doi.org/10.1016/j.jss.2024.112287).
-**Citation**: Natarajan Chidambaram, Alexandre Decan, and Tom Mens. ***A Bot Identification Model and Tool based on GitHub Activity Sequences.*** Journal of Systems and Software, vol. 221, 2025, doi: https://doi.org/10.1145/3643991.3644877.
+**Citation**: Natarajan Chidambaram, Alexandre Decan, and Tom Mens. ***A Bot Identification Model and Tool based on GitHub Activity Sequences.*** Journal of Systems and Software, vol. 221, 2025, doi: https://doi.org/10.1016/j.jss.2024.112287.
 
 ## How it works
 RABBIT accepts a GitHub contributor name (login name) and/or a text file of multiple login names (one name per line). It requires a GitHub API key if more than 15 queries are required to be made per hour.
