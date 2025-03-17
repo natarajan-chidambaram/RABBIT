@@ -1,6 +1,40 @@
 [build-system]
-requires = [
-  "setuptools >= 70.0.0",
-  "wheel",
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rabbit"
+version = "2.3.1"
+description = "RABBIT - Rabbit is an Activity Based Bot Identification Tool to detect bot contributors in GitHub repositories based on their recent activity sequences"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.12"
+dependencies = [
+  "joblib>=1.4.2",
+  "numpy>=2.2.4",
+  "pandas>=2.2.3",
+  "python-dateutil>=2.9.0.post0",
+  "requests>=2.32.3",
+  "scikit-learn==1.5.2",
+  "scipy>=1.15.2",
+  "tqdm>=4.67.1",
 ]
-build-backend = "setuptools.build_meta"
+keywords = [
+  "bot-detection",
+  "activity-based",
+  "github",
+  "bot-identification",
+  "github contributor activity",
+]
+authors = [
+  { name = "Natarajan Chidambaram", email = "natarajan.chidambaram@umons.ac.be" },
+]
+
+[project.urls]
+Repository = "https://github.com/natarajan-chidambaram/RABBIT"
+
+[project.scripts]
+rabbit = "rabbit.rabbit:cli"
+
+[project.optional-dependencies]
+test = ["pytest"]
