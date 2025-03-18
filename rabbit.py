@@ -17,6 +17,7 @@ import important_features as imf
 
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+from importlib.resources import files
 
 TIMEOUT_WAITING_TIME = 30
 CONNECTION_ERROR_WAITING_TIME = 10
@@ -59,15 +60,22 @@ def get_model():
     '''
 
     model_file = 'bimbas.joblib'
-    for dir in site.getsitepackages():
-        if dir.endswith('site-packages'):
-            target_dir = dir
-        else:
-            target_dir = site.getsitepackages()[0]
-    bot_identification_model = joblib.load(f'{target_dir}/{model_file}')
-    # bot_identification_model = joblib.load(model_file)
+    # for dir in site.getsitepackages():
+    #     if dir.endswith('site-packages'):
+    #         target_dir = dir
+    #     else:
+    #         target_dir = site.getsitepackages()[0]
+    # bot_identification_model = joblib.load(f'{target_dir}/{model_file}')
+    # # bot_identification_model = joblib.load(model_file)
     
-    return(bot_identification_model)
+    # return(bot_identification_model)
+
+    try:
+        resource_path = files("rabbit").joinpath(model_file) # Produced with scikit-learn 1.5 
+        bot_identification_model = joblib.load(resource_path)
+        return(bot_identification_model)
+    except Exception as e:
+        raise RuntimeError(f"Failed to load the model: {e}")
 
 def compute_confidence(probability_value):
     '''
