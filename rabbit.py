@@ -484,7 +484,7 @@ def cli():
     #     time_after = datetime.strftime(datetime.now()+relativedelta(days=-91), '%Y-%m-%d %H:%M:%S')
 
     if args.key == '' or len(args.key) < 40:
-        warnings.warn('A valid GitHub personal access token is required if more than 15 queries are required to be made per hour. \
+        warnings.warn('A valid GitHub personal access token is required if more than 60 queries are required to be made per hour. \
 Please read more about it in the repository readme file.')
         apikey = None
     else:
