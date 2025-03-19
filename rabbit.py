@@ -398,7 +398,7 @@ def get_results(contributors_name_file, contributor_name, apikey, min_events, mi
         if incremental:
             save_results(all_results, output_type, save_path)
     
-    if ~incremental:
+    if not incremental:
         save_results(all_results, output_type, save_path)
 
 def save_results(all_results, output_type, save_path):
