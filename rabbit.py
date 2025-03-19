@@ -17,6 +17,7 @@ import important_features as imf
 
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+from importlib.resources import files
 
 TIMEOUT_WAITING_TIME = 30
 CONNECTION_ERROR_WAITING_TIME = 10
@@ -59,15 +60,22 @@ def get_model():
     '''
 
     model_file = 'bimbas.joblib'
-    for dir in site.getsitepackages():
-        if dir.endswith('site-packages'):
-            target_dir = dir
-        else:
-            target_dir = site.getsitepackages()[0]
-    bot_identification_model = joblib.load(f'{target_dir}/{model_file}')
-    # bot_identification_model = joblib.load(model_file)
+    # for dir in site.getsitepackages():
+    #     if dir.endswith('site-packages'):
+    #         target_dir = dir
+    #     else:
+    #         target_dir = site.getsitepackages()[0]
+    # bot_identification_model = joblib.load(f'{target_dir}/{model_file}')
+    # # bot_identification_model = joblib.load(model_file)
     
-    return(bot_identification_model)
+    # return(bot_identification_model)
+
+    try:
+        resource_path = files("rabbit").joinpath(model_file) # Produced with scikit-learn 1.5 
+        bot_identification_model = joblib.load(resource_path)
+        return(bot_identification_model)
+    except Exception as e:
+        raise RuntimeError(f"Failed to load the model: {e}")
 
 def compute_confidence(probability_value):
     '''
@@ -390,7 +398,7 @@ def get_results(contributors_name_file, contributor_name, apikey, min_events, mi
         if incremental:
             save_results(all_results, output_type, save_path)
     
-    if ~incremental:
+    if not incremental:
         save_results(all_results, output_type, save_path)
 
 def save_results(all_results, output_type, save_path):
@@ -476,7 +484,7 @@ def cli():
     #     time_after = datetime.strftime(datetime.now()+relativedelta(days=-91), '%Y-%m-%d %H:%M:%S')
 
     if args.key == '' or len(args.key) < 40:
-        warnings.warn('A valid GitHub personal access token is required if more than 15 queries are required to be made per hour. \
+        warnings.warn('A valid GitHub personal access token is required if more than 60 queries are required to be made per hour. \
 Please read more about it in the repository readme file.')
         apikey = None
     else:
