@@ -60,15 +60,6 @@ def get_model():
     '''
 
     model_file = 'bimbas.joblib'
-    # for dir in site.getsitepackages():
-    #     if dir.endswith('site-packages'):
-    #         target_dir = dir
-    #     else:
-    #         target_dir = site.getsitepackages()[0]
-    # bot_identification_model = joblib.load(f'{target_dir}/{model_file}')
-    # # bot_identification_model = joblib.load(model_file)
-    
-    # return(bot_identification_model)
 
     try:
         resource_path = files("rabbit").joinpath(model_file) # Produced with scikit-learn 1.5 
